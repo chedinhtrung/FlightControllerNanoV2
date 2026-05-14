@@ -16,8 +16,8 @@ ReceiverData control_raw;
 ReceiverData control_cmd;
 Motor motor;
 
-PID y_rate_pid(0.0007, 1e-4, 2e-7); ;
-PID x_rate_pid(0.0007, 1e-4, 2e-7);
+PID y_rate_pid(0.0008, 1.5e-4, 1.5e-7); ;
+PID x_rate_pid(0.0008, 1.5e-4, 1.5e-7);
 PID z_rate_pid(0.0018, 2e-4, 0);
 
 unsigned long last_active = micros();
@@ -57,8 +57,8 @@ void loop() {
   // calculate errors
 
   EulerAngle e = quaternionToEuler(madgw.q);  
-  double pitch_error = rd.PitchIn - e.pitch * DEG_PER_RAD;
-  double roll_error = rd.RollIn - e.roll * DEG_PER_RAD;
+  double pitch_error = rd.PitchIn - (e.pitch * DEG_PER_RAD + 1); // some sensor mount calibration
+  double roll_error = rd.RollIn - (e.roll * DEG_PER_RAD - 1);
 
   double pitchrate_target, rollrate_target;
 
