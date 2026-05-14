@@ -1,18 +1,29 @@
 #include <Arduino.h>
+#include <Wire.h>
 
-// put function declarations here:
-int myFunction(int, int);
+#include "debug.h"
+#include "drivers/mpu9250.h"
+
+MPU9250 imu;
+ImuData imu_data;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  Serial.begin(115200);
+  delay(200);
+
+  Wire.begin();
+  Wire.setClock(400000);
+
+  imu.setup();
+
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
+  if (imu.read(imu_data)) {
+    log(imu_data, "IMU");
+  } else {
+    Serial.println("IMU read failed");
+  }
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+  delay(4);
 }
