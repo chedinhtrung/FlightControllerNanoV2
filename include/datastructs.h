@@ -2,6 +2,7 @@
 #define DATASTRUCT
 
 #include <Arduino.h>
+#include "config.h"
 
 struct Quaternion;
 

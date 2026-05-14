@@ -40,3 +40,19 @@ void debug::log(const ImuData &value, const char *label) {
     debug::log(value.accel, "  accel(g)");
     debug::log(value.gyro, "  gyro(dps)");
 }
+
+void debug::log(const ReceiverData &value, const char *label) {
+    char buf[220];
+    sprintf(
+        buf,
+        "%s thr=%.2f roll=%.2f pitch=%.2f yaw=%.2f aux5=%.2f aux6=%.2f",
+        label,
+        value.ThrottleIn,
+        value.RollIn,
+        value.PitchIn,
+        value.YawIn,
+        value.AuxChannel5In,
+        value.AuxChannel6In
+    );
+    Serial.println(buf);
+}

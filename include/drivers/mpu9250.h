@@ -32,7 +32,7 @@ class MPU9250 {
         // Raw values for data gathering
         RawImuData raw;
         
-        Vec3 accel_bias_g {-0.13f, -0.09f, 0.03f};
+        Vec3 accel_bias_g {0, 0, 0};
         Vec3 gyro_bias;
 
         uint32_t last_update_us = micros();
