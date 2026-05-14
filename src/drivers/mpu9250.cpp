@@ -18,7 +18,7 @@ constexpr float ACCEL_LSB_PER_G   = 8192.0f;  // +-4 g
 constexpr float GYRO_DPS_PER_LSB  = 1.0f / GYRO_LSB_PER_DPS;
 constexpr float ACCEL_G_PER_LSB   = 1.0f / ACCEL_LSB_PER_G;
 
-const Vect ORIENTATION_SIGN = {IMU_MAP_X_SIGN, IMU_MAP_Y_SIGN, IMU_MAP_Z_SIGN};
+const Vec3 ORIENTATION_SIGN = {IMU_MAP_X_SIGN, IMU_MAP_Y_SIGN, IMU_MAP_Z_SIGN};
 
 bool writeRegister(uint8_t reg, uint8_t value) {
     Wire.beginTransmission(IMUADDR);
@@ -141,13 +141,13 @@ bool MPU9250::read(ImuData &data) {
         return false;
     }
 
-    Vect gyro_base = {
+    Vec3 gyro_base = {
         raw.gyro.x * GYRO_DPS_PER_LSB,
         raw.gyro.y * GYRO_DPS_PER_LSB,
         raw.gyro.z * GYRO_DPS_PER_LSB
     };
 
-    Vect accel_base = {
+    Vec3 accel_base = {
         raw.accel.x * ACCEL_G_PER_LSB,
         raw.accel.y * ACCEL_G_PER_LSB,
         raw.accel.z * ACCEL_G_PER_LSB
@@ -172,5 +172,16 @@ bool MPU9250::read(ImuData &data) {
 
     data.accel *= ORIENTATION_SIGN;
     data.gyro *= ORIENTATION_SIGN;
+    data.gyro *= RAD_PER_DEG;  // Convert to radian
     return true;
+}
+
+void MPU9250::update(ImuData &data){
+    uint32_t now = micros();
+
+    if ((uint32_t)(now - last_update_us) < PERIOD_US) {
+        return;
+    }
+
+    read(data);
 }

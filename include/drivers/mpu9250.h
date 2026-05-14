@@ -23,8 +23,8 @@ struct RawImuData {
 };
 
 struct ImuData {
-    Vect gyro; 
-    Vect accel;
+    Vec3 gyro; 
+    Vec3 accel;
 };
 
 class MPU9250 {
@@ -32,12 +32,16 @@ class MPU9250 {
         // Raw values for data gathering
         RawImuData raw;
         
-        Vect accel_bias_g;
-        Vect gyro_bias;
+        Vec3 accel_bias_g {-0.13f, -0.09f, 0.03f};
+        Vec3 gyro_bias;
+
+        uint32_t last_update_us = micros();
         
         void setup();
         void calibrate();
         bool read(ImuData &data);
+
+        void update(ImuData &data);
         
 };
 
