@@ -7,6 +7,16 @@
 
 #define IMUADDR 0x68 // MPU9250 I2C address
 
+// Orientation mapping (sensor -> body). Source index: 0=x, 1=y, 2=z.
+// Signs are 1 or -1.
+
+#define IMU_MAP_X_SRC 1
+#define IMU_MAP_X_SIGN -1
+#define IMU_MAP_Y_SRC 0
+#define IMU_MAP_Y_SIGN 1
+#define IMU_MAP_Z_SRC 2
+#define IMU_MAP_Z_SIGN 1
+
 struct RawImuData {
     VectInt16 accel;
     VectInt16 gyro;

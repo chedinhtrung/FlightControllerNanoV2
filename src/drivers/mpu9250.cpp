@@ -15,6 +15,10 @@ constexpr uint8_t REG_ACCEL_XOUT_H  = 0x3B; // Start of accel/temp/gyro burst da
 
 constexpr float GYRO_LSB_PER_DPS  = 131.0f;   // +-250 dps
 constexpr float ACCEL_LSB_PER_G   = 8192.0f;  // +-4 g
+constexpr float GYRO_DPS_PER_LSB  = 1.0f / GYRO_LSB_PER_DPS;
+constexpr float ACCEL_G_PER_LSB   = 1.0f / ACCEL_LSB_PER_G;
+
+const Vect ORIENTATION_SIGN = {IMU_MAP_X_SIGN, IMU_MAP_Y_SIGN, IMU_MAP_Z_SIGN};
 
 bool writeRegister(uint8_t reg, uint8_t value) {
     Wire.beginTransmission(IMUADDR);
@@ -104,10 +108,7 @@ void MPU9250::calibrate(){
     accel_bias_g = {};
     gyro_bias = {};
 
-    constexpr int kSamples = 400;
-    long sum_ax = 0;
-    long sum_ay = 0;
-    long sum_az = 0;
+    constexpr int kSamples = 1000;
     long sum_gx = 0;
     long sum_gy = 0;
     long sum_gz = 0;
@@ -118,24 +119,16 @@ void MPU9250::calibrate(){
         if (!readBurstRaw(sample.accel, sample.gyro)) {
             continue;
         }
-        sum_ax += sample.accel.x;
-        sum_ay += sample.accel.y;
-        sum_az += sample.accel.z;
         sum_gx += sample.gyro.x;
         sum_gy += sample.gyro.y;
         sum_gz += sample.gyro.z;
         ++valid;
-        delay(2);
+        delay(4);
     }
 
     if (valid == 0) {
         return;
     }
-
-    // Assume level during calibration: X/Y should be 0 g, Z should be +1 g.
-    accel_bias_g.x = (sum_ax / (float)valid) / ACCEL_LSB_PER_G;
-    accel_bias_g.y = (sum_ay / (float)valid) / ACCEL_LSB_PER_G;
-    accel_bias_g.z = ((sum_az / (float)valid) / ACCEL_LSB_PER_G) - 1.0f;
 
     // Assume stationary during calibration: gyro should be 0 dps.
     gyro_bias.x = (sum_gx / (float)valid) / GYRO_LSB_PER_DPS;
@@ -148,12 +141,36 @@ bool MPU9250::read(ImuData &data) {
         return false;
     }
 
-    data.gyro.x = (raw.gyro.x / GYRO_LSB_PER_DPS) - gyro_bias.x;
-    data.gyro.y = (raw.gyro.y / GYRO_LSB_PER_DPS) - gyro_bias.y;
-    data.gyro.z = (raw.gyro.z / GYRO_LSB_PER_DPS) - gyro_bias.z;
+    Vect gyro_base = {
+        raw.gyro.x * GYRO_DPS_PER_LSB,
+        raw.gyro.y * GYRO_DPS_PER_LSB,
+        raw.gyro.z * GYRO_DPS_PER_LSB
+    };
 
-    data.accel.x = (raw.accel.x / ACCEL_LSB_PER_G) - accel_bias_g.x;
-    data.accel.y = (raw.accel.y / ACCEL_LSB_PER_G) - accel_bias_g.y;
-    data.accel.z = (raw.accel.z / ACCEL_LSB_PER_G) - accel_bias_g.z;
+    Vect accel_base = {
+        raw.accel.x * ACCEL_G_PER_LSB,
+        raw.accel.y * ACCEL_G_PER_LSB,
+        raw.accel.z * ACCEL_G_PER_LSB
+    };
+
+    gyro_base = (gyro_base - gyro_bias);
+    accel_base = (accel_base - accel_bias_g);
+
+    const float gyro_arr[3] = {gyro_base.x, gyro_base.y, gyro_base.z};
+    const float accel_arr[3] = {accel_base.x, accel_base.y, accel_base.z};
+
+    data.gyro = {
+        gyro_arr[IMU_MAP_X_SRC],
+        gyro_arr[IMU_MAP_Y_SRC],
+        gyro_arr[IMU_MAP_Z_SRC]
+    };
+    data.accel = {
+        accel_arr[IMU_MAP_X_SRC],
+        accel_arr[IMU_MAP_Y_SRC],
+        accel_arr[IMU_MAP_Z_SRC]
+    };
+
+    data.accel *= ORIENTATION_SIGN;
+    data.gyro *= ORIENTATION_SIGN;
     return true;
 }

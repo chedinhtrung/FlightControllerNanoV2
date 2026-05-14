@@ -13,7 +13,8 @@ void setup() {
 
   Wire.begin();
   Wire.setClock(400000);
-
+  
+  delay(2000);
   imu.setup();
 
 }
