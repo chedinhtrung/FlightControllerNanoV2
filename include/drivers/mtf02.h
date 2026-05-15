@@ -30,8 +30,6 @@ private:
     static constexpr uint8_t kRangeMsgId = 0x51;
     static constexpr uint8_t kMaxPayloadLen = 64;
 
-    static constexpr float sensor_to_G = 5.0;
-
     HardwareSerial &serial_;
     uint32_t baud_ = 115200;
     MTF02Data flow_data_{};

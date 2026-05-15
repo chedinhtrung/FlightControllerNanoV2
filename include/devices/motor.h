@@ -8,7 +8,7 @@ class MotorDevice {
 public:
     explicit MotorDevice(MotorDriver &driver);
 
-    void write(float throttle, float pitch_adjust, float roll_adjust, float yaw_adjust);
+    void write(float throttle, float yaw_adjust, float pitch_adjust, float roll_adjust);
 
 private:
     MotorDriver &driver_;

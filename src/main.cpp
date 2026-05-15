@@ -36,9 +36,7 @@ MTF02 mtf02(Serial3);
 OpticalFlow optical_flow(mtf02);
 MTF02Data mtf02_data;
 
-PID y_rate_pid(0.0005, 1e-4, 2.5e-7); ;
-PID x_rate_pid(0.0005, 1e-4, 2.5e-7);
-PID z_rate_pid(0.0018, 1.2e-4, 0);
+AttiStabilizer atti_stabilizer;
 
 unsigned long last_active = micros();
 
@@ -62,8 +60,9 @@ void setup() {
   delay(500);
 
   // Initial read and initialize the attitude estimate.
-  if (!imu.read(imu_data)) {
+  while (!imu_device.read(imu_data)) {
     // Placeholder: optional initial IMU read error handling.
+    delay(1);
   }
   madgw = Madgwick(MW_BETA, imu_data.accel);
 
@@ -86,56 +85,25 @@ void loop() {
   if (!receiver.read(cmd_raw)) {
     // Placeholder: optional receiver read error handling.
   }
-  PPMCommand rd = receiver.to_anglemode(cmd_raw);       //IMPORTANT: forgetting this line will cause drone to fly away
+  PPMCommand rd = receiver.normalize(cmd_raw);       //IMPORTANT: forgetting this line will cause drone to fly away
 
-  
+  EulerAngle target {
+    .yaw = rd.C1,
+    .pitch = rd.C2, 
+    .roll = rd.C4
+  };
+
   // calculate errors
 
-  EulerAngle e = quaternionToEuler(madgw.q);  
-  double pitch_error = rd.C2 - (e.pitch * DEG_PER_RAD + 0.3); // some sensor mount calibration
-  double roll_error = rd.C4 - (e.roll * DEG_PER_RAD + 4.5);
-
-  double pitchrate_target, rollrate_target;
-
-  // use square root curve to calculate desired rates
-  if (pitch_error >= 0){
-    pitchrate_target = pitch_error/(0.025*sqrt(pitch_error) + 0.45);
-  } else {
-    pitchrate_target = pitch_error/(0.025*sqrt(-pitch_error) + 0.45);
-  }
-
-  if (roll_error >= 0){
-    rollrate_target = roll_error/(0.018*sqrt(roll_error) + 0.45);;
-  } else {
-    rollrate_target = roll_error/(0.018*sqrt(-roll_error) + 0.45);
-  }
-  
-
-  double yawrate_target = 2.8*rd.C1;
-
-  EulerAngle euler_rate_target;
-  euler_rate_target.pitch = pitchrate_target;
-  euler_rate_target.roll = rollrate_target;
-  euler_rate_target.yaw = yawrate_target;
-  
-  // convert to desired body rate
-
-  Vec3 body_rate_target = eulerRatesToBodyRates(e, euler_rate_target);
-
-  // feed the error to pid
-  double pitchadjust = y_rate_pid.calculate(body_rate_target.y - imu_data.gyro.y * DEG_PER_RAD);
-  double rolladjust = x_rate_pid.calculate(body_rate_target.x - imu_data.gyro.x * DEG_PER_RAD);
-  double yawadjust = z_rate_pid.calculate(body_rate_target.z - imu_data.gyro.z * DEG_PER_RAD);
+  MotorAdjust m_adjust = atti_stabilizer.compute_rpy_adjust(madgw.q, target, imu_data.gyro);
 
   // Output to motor, lock until throttle is not 0
 
   if (rd.C3 > 0.01 && rd.C3 <= 1.0){
-    motor_device.write(rd.C3, pitchadjust, rolladjust, yawadjust);
+    motor_device.write(rd.C3, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
   } else {
     motor.set_motor(MotorCommand{});
-    x_rate_pid.reset();
-    y_rate_pid.reset();
-    z_rate_pid.reset();
+    atti_stabilizer.reset();
     //alt.filter.reset();
   }
 
