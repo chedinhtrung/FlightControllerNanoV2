@@ -42,6 +42,7 @@ inline Quaternion quatFromTwoUnitVectors(Vec3 from, Vec3 to) {
     return normalize(q);
 }
 
+// Convert quaternion to yaw - pitch - roll euler angles in radian
 inline EulerAngle quaternionToEuler(const Quaternion& q)
 {
     EulerAngle e;
@@ -68,7 +69,7 @@ inline EulerAngle quaternionToEuler(const Quaternion& q)
     return e;
 }
 
-
+// Convert euler angle rate of change to body frame rate of change 
 inline Vec3 eulerRatesToBodyRates(const EulerAngle& attitude,
                               const EulerAngle& euler_rate)
 {
@@ -95,6 +96,10 @@ inline Vec3 eulerRatesToBodyRates(const EulerAngle& attitude,
                  + yaw_dot * cphi * ctheta;
 
     return omega_body;
+}
+
+inline Vec3 get_compensated_vxy(){
+    
 }
 
 #endif

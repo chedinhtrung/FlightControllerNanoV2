@@ -2,6 +2,7 @@
 #include <Wire.h>
 
 #include "debug.h"
+#include "devices/imu.h"
 #include "drivers/motors.h"
 #include "drivers/mtf02.h"
 #include "drivers/ms5611.h"
@@ -11,14 +12,21 @@
 #include "pid.h"
 
 MPU9250 imu;
-Madgwick madgw;
+Imu imu_device(imu);
 ImuData imu_data;
+
+Madgwick madgw;
+
 Receiver receiver;
+
 ReceiverData control_raw;
 ReceiverData control_cmd;
+
 Motor motor;
+
 MS5611 baro;
 BaroData baro_data;
+
 MTF02 optical_flow(Serial3);
 MTF02Data mtf02_data;
 
@@ -36,13 +44,17 @@ void setup() {
   Wire.setClock(400000);
   
   delay(5000);
-  imu.setup();
+  if (!imu_device.setup()) {
+    // Placeholder: optional IMU setup error handling.
+  }
   baro.setup();
   optical_flow.setup();
   delay(500);
 
   // Initial read and initialize the attitude estimate.
-  imu.read(imu_data);
+  if (!imu.read(imu_data)) {
+    // Placeholder: optional initial IMU read error handling.
+  }
   madgw = Madgwick(MW_BETA, imu_data.accel);
 
   // Safety lock: arm loop only after throttle is low.
@@ -55,7 +67,10 @@ void setup() {
 void loop() {
   last_active = micros();
 
-  imu.update(imu_data);
+  imu_device.update();
+  if (!imu_device.read(imu_data)) {
+    // Placeholder: optional IMU read error handling.
+  }
   madgw.update(imu_data);
 
   ReceiverData rd = receiver.recv();

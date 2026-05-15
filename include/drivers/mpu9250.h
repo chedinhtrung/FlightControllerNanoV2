@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "datastructs.h"
+#include "interfaces.h"
 #include <Arduino.h>
 
 #define IMUADDR 0x68 // MPU9250 I2C address
@@ -27,7 +28,7 @@ struct ImuData {
     Vec3 accel;
 };
 
-class MPU9250 {
+class MPU9250 : public ImuDriver {
     public: 
         // Raw values for data gathering
         RawImuData raw;
@@ -35,13 +36,9 @@ class MPU9250 {
         Vec3 accel_bias_g {0, 0, 0};
         Vec3 gyro_bias;
 
-        uint32_t last_update_us = micros();
-        
-        void setup();
+        bool setup() override;
         void calibrate();
-        bool read(ImuData &data);
-
-        void update(ImuData &data);
+        bool read(ImuData &data) override;
         
 };
 

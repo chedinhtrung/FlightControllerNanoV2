@@ -65,13 +65,13 @@ bool readBurstRaw(VectInt16 &accel, VectInt16 &gyro) {
 }
 }
 
-void MPU9250::setup(){
+bool MPU9250::setup(){
     Wire.begin();
 
     // Optional sanity read. Expected WHO_AM_I for MPU9250 is 0x71.
     const uint8_t whoami = readRegister(REG_WHO_AM_I);
     if (whoami != 0x71) {
-        return;
+        return false;
     }
 
     // DEVICE_RESET = 1 (PWR_MGMT_1[7]).
@@ -101,7 +101,7 @@ void MPU9250::setup(){
     writeRegister(REG_ACCEL_CONFIG2, 0x01);
 
     calibrate();
-
+    return true;
 }
 
 void MPU9250::calibrate(){
@@ -174,14 +174,4 @@ bool MPU9250::read(ImuData &data) {
     data.gyro *= ORIENTATION_SIGN;
     data.gyro *= RAD_PER_DEG;  // Convert to radian
     return true;
-}
-
-void MPU9250::update(ImuData &data){
-    uint32_t now = micros();
-
-    if ((uint32_t)(now - last_update_us) < PERIOD_US) {
-        return;
-    }
-
-    read(data);
 }

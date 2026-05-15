@@ -5,12 +5,12 @@
 
 struct MTF02Data {
     uint32_t time_ms = 0;
-    uint32_t distance_mm = 0;
+    uint32_t dist_mm = 0;
     uint8_t strength = 0;
     uint8_t precision = 0;
-    uint8_t distance_status = 0;
-    int16_t flow_vel_x = 0;
-    int16_t flow_vel_y = 0;
+    uint8_t dist_status = 0;
+    int16_t flow_x = 0;
+    int16_t flow_y = 0;
     uint8_t flow_quality = 0;
     uint8_t flow_status = 0;
 };
@@ -27,6 +27,8 @@ private:
     static constexpr uint8_t kHead = 0xEF;
     static constexpr uint8_t kRangeMsgId = 0x51;
     static constexpr uint8_t kMaxPayloadLen = 64;
+
+    static constexpr float sensor_to_G = 5.0;
 
     HardwareSerial &serial_;
     MTF02Data flow_data_{};
