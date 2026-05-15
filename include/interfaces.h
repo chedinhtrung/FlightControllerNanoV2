@@ -6,6 +6,7 @@ struct MotorCommand;
 struct PPMCommand;
 struct RPICommand;
 struct BaroData;
+struct MTF02Data;
 
 class ImuDriver {
 public:
@@ -33,6 +34,15 @@ public:
     virtual bool setup() = 0;
     virtual void kick() = 0;
     virtual bool read(BaroData &data) = 0;
+};
+
+class OpticalFlowDriver {
+public:
+    virtual ~OpticalFlowDriver() = default;
+    virtual bool setup() = 0;
+    virtual bool parse() = 0;
+    virtual bool has_bytes() const = 0;
+    virtual bool read(MTF02Data &data) = 0;
 };
 
 #endif

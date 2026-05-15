@@ -2,6 +2,7 @@
 #define MTF02_H
 
 #include <Arduino.h>
+#include "interfaces.h"
 
 struct MTF02Data {
     uint32_t time_ms = 0;
@@ -15,13 +16,14 @@ struct MTF02Data {
     uint8_t flow_status = 0;
 };
 
-class MTF02 {
+class MTF02 : public OpticalFlowDriver {
 public:
     explicit MTF02(HardwareSerial &serial);
 
-    void setup(uint32_t baud = 115200);
-    void kick();
-    bool read(MTF02Data &out);
+    bool setup() override;
+    bool parse() override;
+    bool has_bytes() const override;
+    bool read(MTF02Data &out) override;
 
 private:
     static constexpr uint8_t kHead = 0xEF;
@@ -31,6 +33,7 @@ private:
     static constexpr float sensor_to_G = 5.0;
 
     HardwareSerial &serial_;
+    uint32_t baud_ = 115200;
     MTF02Data flow_data_{};
     bool has_new_sample_ = false;
 

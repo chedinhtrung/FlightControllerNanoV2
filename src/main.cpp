@@ -5,6 +5,7 @@
 #include "devices/imu.h"
 #include "devices/barometer.h"
 #include "devices/motor.h"
+#include "devices/optical_flow.h"
 #include "devices/receiver.h"
 #include "drivers/motors.h"
 #include "drivers/mtf02.h"
@@ -31,7 +32,8 @@ MS5611 baro;
 Barometer barometer(baro);
 BaroData baro_data;
 
-MTF02 optical_flow(Serial3);
+MTF02 mtf02(Serial3);
+OpticalFlow optical_flow(mtf02);
 MTF02Data mtf02_data;
 
 PID y_rate_pid(0.0005, 1e-4, 2.5e-7); ;
@@ -54,7 +56,9 @@ void setup() {
   if (!barometer.setup()) {
     // Placeholder: optional barometer setup error handling.
   }
-  optical_flow.setup();
+  if (!optical_flow.setup()) {
+    // Placeholder: optional optical flow setup error handling.
+  }
   delay(500);
 
   // Initial read and initialize the attitude estimate.
@@ -141,7 +145,10 @@ void loop() {
     Serial.printf("alt_m: %.3f\n", baro_data.altitude_m);
   }
 
-  optical_flow.kick();
+  // Low priority parse window: consume bytes while data is pending and loop time remains.
+  while (optical_flow.has_bytes() && (micros() - last_active) < (PERIOD_US - 200)) {
+    optical_flow.parse();
+  }
   if (optical_flow.read(mtf02_data)) {
     debug::log(mtf02_data, "optical_flow");
   }

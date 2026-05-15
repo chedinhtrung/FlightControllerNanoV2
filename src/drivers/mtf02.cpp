@@ -2,16 +2,23 @@
 
 MTF02::MTF02(HardwareSerial &serial) : serial_(serial) {}
 
-void MTF02::setup(uint32_t baud) {
-    serial_.begin(baud);
+bool MTF02::setup() {
+    serial_.begin(baud_);
     reset_parser();
+    return true;
 }
 
-void MTF02::kick() {
-    while (serial_.available() > 0) {
-        const uint8_t byte_in = (uint8_t)serial_.read();
-        parse_char(byte_in);
+bool MTF02::parse() {
+    if (serial_.available() <= 0) {
+        return false;
     }
+    const uint8_t byte_in = (uint8_t)serial_.read();
+    parse_char(byte_in);
+    return true;
+}
+
+bool MTF02::has_bytes() const {
+    return serial_.available() > 0;
 }
 
 bool MTF02::read(MTF02Data &out) {
