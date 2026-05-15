@@ -3,6 +3,7 @@
 
 #include "debug.h"
 #include "drivers/motors.h"
+#include "drivers/ms5611.h"
 #include "drivers/mpu9250.h"
 #include "drivers/receiver.h"
 #include "madgwick.h"
@@ -15,10 +16,12 @@ Receiver receiver;
 ReceiverData control_raw;
 ReceiverData control_cmd;
 Motor motor;
+MS5611 baro;
+BaroData baro_data;
 
-PID y_rate_pid(0.0008, 1.5e-4, 1.5e-7); ;
-PID x_rate_pid(0.0008, 1.5e-4, 1.5e-7);
-PID z_rate_pid(0.0018, 2e-4, 0);
+PID y_rate_pid(0.0005, 1e-4, 2.5e-7); ;
+PID x_rate_pid(0.0005, 1e-4, 2.5e-7);
+PID z_rate_pid(0.0018, 1.2e-4, 0);
 
 unsigned long last_active = micros();
 
@@ -31,6 +34,7 @@ void setup() {
   
   delay(5000);
   imu.setup();
+  baro.setup();
   delay(500);
 
   // Initial read and initialize the attitude estimate.
@@ -57,8 +61,8 @@ void loop() {
   // calculate errors
 
   EulerAngle e = quaternionToEuler(madgw.q);  
-  double pitch_error = rd.PitchIn - (e.pitch * DEG_PER_RAD + 1); // some sensor mount calibration
-  double roll_error = rd.RollIn - (e.roll * DEG_PER_RAD - 1);
+  double pitch_error = rd.PitchIn - (e.pitch * DEG_PER_RAD + 0.3); // some sensor mount calibration
+  double roll_error = rd.RollIn - (e.roll * DEG_PER_RAD + 4.5);
 
   double pitchrate_target, rollrate_target;
 
@@ -112,6 +116,11 @@ void loop() {
     //alt.filter.reset();
   }
 
-  while(micros() - last_active < DT*1000.0){}
+  baro.kick(baro_data);
+  if (baro.read(baro_data)) {
+    Serial.printf("alt_m: %.3f\n", baro_data.altitude_m);
+  }
+
+  while(micros() - last_active < DT*1e6){}
   
 }

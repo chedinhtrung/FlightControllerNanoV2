@@ -13,6 +13,6 @@ constexpr int PERIOD_LOG_US = 1000000UL / LOG_RATE_HZ;
 
 #define RAD_PER_DEG 0.0174533
 #define DEG_PER_RAD 57.295779
-#define MW_BETA 0.1
+#define MW_BETA 0.06
 
 #endif
