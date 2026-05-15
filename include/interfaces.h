@@ -5,6 +5,7 @@ struct ImuData;
 struct MotorCommand;
 struct PPMCommand;
 struct RPICommand;
+struct BaroData;
 
 class ImuDriver {
 public:
@@ -24,6 +25,14 @@ public:
     virtual ~ReceiverDriver() = default;
     virtual bool read(PPMCommand &cmd) = 0;
     virtual bool read(RPICommand &cmd) = 0;
+};
+
+class BarometerDriver {
+public:
+    virtual ~BarometerDriver() = default;
+    virtual bool setup() = 0;
+    virtual void kick() = 0;
+    virtual bool read(BaroData &data) = 0;
 };
 
 #endif

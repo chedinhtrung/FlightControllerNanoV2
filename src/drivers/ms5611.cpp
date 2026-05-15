@@ -19,9 +19,6 @@ constexpr uint8_t CMD_CONV_D1_OSR4096 = 0x48;
 constexpr uint8_t CMD_CONV_D2_OSR4096 = 0x58;
 
 constexpr uint32_t CONV_TIME_US = 10000;  // 4096 OSR max conversion time is about 9.04 ms.
-constexpr uint32_t BARO_ALT_HZ = 30;
-constexpr uint32_t BARO_ALT_PERIOD_US = 1000000UL / BARO_ALT_HZ;
-constexpr float ALT_FILTER_ALPHA = 0.05f;
 
 bool write_command(uint8_t cmd) {
     Wire.beginTransmission(MS5611_ADDR);
@@ -80,11 +77,11 @@ bool MS5611::read_adc(uint32_t &value) {
 }
 
 // Initialize I2C access, reset the sensor, and cache PROM calibration coefficients.
-void MS5611::setup() {
+bool MS5611::setup() {
     Wire.begin();
     is_ready = reset();
     if (!is_ready) {
-        return;
+        return false;
     }
 
     // One-time boot wait for reset completion (setup-time only, not loop-time).
@@ -97,35 +94,7 @@ void MS5611::setup() {
     has_fresh_sample = false;
     pressure_count_since_temp = 0;
     have_temperature_sample = false;
-    last_update_us = micros();
-    calibrate();
-}
-
-void MS5611::calibrate() {
-    if (!is_ready) {
-        return;
-    }
-
-    constexpr int kSamples = 100;
-    float sum_pressure = 0.0f;
-    int valid = 0;
-    BaroData sample{};
-
-    while (valid < kSamples) {
-        kick(sample);
-        if (read(sample)) {
-            sum_pressure += sample.pres_pa;
-            ++valid;
-        }
-    }
-
-    if (valid > 0) {
-        ground_pressure_pa = sum_pressure / (float)valid;
-    }
-
-    // Reset altitude LPF so first post-calibration sample re-initializes at the new baseline.
-    filter_initialized = false;
-    filtered_altitude_m = 0.0f;
+    return is_ready;
 }
 
 void MS5611::compute_compensation(BaroData &data) {
@@ -157,30 +126,16 @@ bool MS5611::read(BaroData &data) {
     }
     has_fresh_sample = false;
     compute_compensation(data);
-    const float raw_altitude_m = 44330.0f * (1.0f - powf(data.pres_pa / ground_pressure_pa, 0.19029495f));
-
-    if (!filter_initialized) {
-        filtered_altitude_m = raw_altitude_m;
-        filter_initialized = true;
-    } else {
-        filtered_altitude_m += ALT_FILTER_ALPHA * (raw_altitude_m - filtered_altitude_m);
-    }
-
-    data.altitude_m = filtered_altitude_m;
     return true;
 }
 
 // Periodic update helper aligned with the project loop period.
-void MS5611::kick(BaroData &data) {
+void MS5611::kick() {
     if (!is_ready) {
         return;
     }
 
     const uint32_t now = micros();
-    if (state == ReadState::kIdle && (uint32_t)(now - last_update_us) < BARO_ALT_PERIOD_US) {
-        return;
-    }
-
     if (state == ReadState::kIdle) {
         // Kick pressure conversion and return immediately.
         if (start_conversion(CMD_CONV_D1_OSR4096)) {
@@ -209,9 +164,7 @@ void MS5611::kick(BaroData &data) {
                 state = ReadState::kIdle;
             }
         } else {
-            compute_compensation(data);
             has_fresh_sample = true;
-            last_update_us = now;
             state = ReadState::kIdle;
         }
         return;
@@ -228,9 +181,7 @@ void MS5611::kick(BaroData &data) {
 
         have_temperature_sample = true;
         pressure_count_since_temp = 0;
-        compute_compensation(data);
         has_fresh_sample = true;
-        last_update_us = now;
         state = ReadState::kIdle;
     }
 }

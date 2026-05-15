@@ -3,6 +3,7 @@
 
 #include "debug.h"
 #include "devices/imu.h"
+#include "devices/barometer.h"
 #include "devices/motor.h"
 #include "devices/receiver.h"
 #include "drivers/motors.h"
@@ -27,6 +28,7 @@ Motor motor;
 MotorDevice motor_device(motor);
 
 MS5611 baro;
+Barometer barometer(baro);
 BaroData baro_data;
 
 MTF02 optical_flow(Serial3);
@@ -49,7 +51,9 @@ void setup() {
   if (!imu_device.setup()) {
     // Placeholder: optional IMU setup error handling.
   }
-  baro.setup();
+  if (!barometer.setup()) {
+    // Placeholder: optional barometer setup error handling.
+  }
   optical_flow.setup();
   delay(500);
 
@@ -132,8 +136,8 @@ void loop() {
     //alt.filter.reset();
   }
 
-  baro.kick(baro_data);
-  if (baro.read(baro_data)) {
+  barometer.update();
+  if (barometer.read(baro_data)) {
     Serial.printf("alt_m: %.3f\n", baro_data.altitude_m);
   }
 
