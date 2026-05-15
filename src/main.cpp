@@ -3,6 +3,7 @@
 
 #include "debug.h"
 #include "devices/imu.h"
+#include "devices/motor.h"
 #include "drivers/motors.h"
 #include "drivers/mtf02.h"
 #include "drivers/ms5611.h"
@@ -23,6 +24,7 @@ ReceiverData control_raw;
 ReceiverData control_cmd;
 
 Motor motor;
+MotorDevice motor_device(motor);
 
 MS5611 baro;
 BaroData baro_data;
@@ -115,20 +117,12 @@ void loop() {
   double rolladjust = x_rate_pid.calculate(body_rate_target.x - imu_data.gyro.x * DEG_PER_RAD);
   double yawadjust = z_rate_pid.calculate(body_rate_target.z - imu_data.gyro.z * DEG_PER_RAD);
 
-  //Map to motor output
-
-  float fl = rd.ThrottleIn + pitchadjust + rolladjust - yawadjust;
-  float fr = rd.ThrottleIn + pitchadjust - rolladjust + yawadjust;
-  float bl = rd.ThrottleIn - pitchadjust + rolladjust + yawadjust;
-  float br = rd.ThrottleIn - pitchadjust - rolladjust - yawadjust;
-
   // Output to motor, lock until throttle is not 0
-  // Danger: forgetting to convert rd.ThrottleIn to percentage will lead to flyaway
 
   if (rd.ThrottleIn > 0.01 && rd.ThrottleIn <= 1.0){
-    motor.set_motor(fl, fr, bl, br);
+    motor_device.command_motor(rd.ThrottleIn, pitchadjust, rolladjust, yawadjust);
   } else {
-    motor.set_motor(0.0f, 0.0f, 0.0f, 0.0f);
+    motor.set_motor(MotorCommand{});
     x_rate_pid.reset();
     y_rate_pid.reset();
     z_rate_pid.reset();

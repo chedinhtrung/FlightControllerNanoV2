@@ -29,17 +29,17 @@ void Motor::set_motor_raw(int fl, int fr, int bl, int br) {
     analogWrite(BR, br);
 }
 
-void Motor::set_motor(float fl, float fr, float bl, float br) {
+void Motor::set_motor(const MotorCommand &cmd) {
     /*
         FrontLeft  ---- ^^^^^^ ---- FrontRight
 
         BackLeft   ---- ^^^^^^ ---- BackRight
     */
 
-    fl = clamp01(fl);
-    fr = clamp01(fr);
-    bl = clamp01(bl);
-    br = clamp01(br);
+    const float fl = clamp01(cmd.fl);
+    const float fr = clamp01(cmd.fr);
+    const float bl = clamp01(cmd.bl);
+    const float br = clamp01(cmd.br);
 
     const int mfl = motor_float_to_raw(fl);
     const int mfr = motor_float_to_raw(fr);
