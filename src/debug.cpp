@@ -41,18 +41,18 @@ void debug::log(const ImuData &value, const char *label) {
     debug::log(value.gyro, "  gyro(dps)");
 }
 
-void debug::log(const ReceiverData &value, const char *label) {
+void debug::log(const PPMCommand &value, const char *label) {
     char buf[220];
     sprintf(
         buf,
-        "%s thr=%.2f roll=%.2f pitch=%.2f yaw=%.2f aux5=%.2f aux6=%.2f",
+        "%s C1=%.2f C2=%.2f C3=%.2f C4=%.2f C5=%.2f C6=%.2f",
         label,
-        value.ThrottleIn,
-        value.RollIn,
-        value.PitchIn,
-        value.YawIn,
-        value.AuxChannel5In,
-        value.AuxChannel6In
+        value.C1,
+        value.C2,
+        value.C3,
+        value.C4,
+        value.C5,
+        value.C6
     );
     Serial.println(buf);
 }

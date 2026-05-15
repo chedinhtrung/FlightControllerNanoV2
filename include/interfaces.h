@@ -3,6 +3,8 @@
 
 struct ImuData;
 struct MotorCommand;
+struct PPMCommand;
+struct RPICommand;
 
 class ImuDriver {
 public:
@@ -15,6 +17,13 @@ class MotorDriver {
 public:
     virtual ~MotorDriver() = default;
     virtual void set_motor(const MotorCommand &cmd) = 0;
+};
+
+class ReceiverDriver {
+public:
+    virtual ~ReceiverDriver() = default;
+    virtual bool read(PPMCommand &cmd) = 0;
+    virtual bool read(RPICommand &cmd) = 0;
 };
 
 #endif

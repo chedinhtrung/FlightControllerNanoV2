@@ -14,7 +14,7 @@ void log(const EulerAngle &value, const char *label = "EulerAngle");
 void log(const Quaternion &value, const char *label = "Quaternion");
 void log(const RawImuData &value, const char *label = "RawImuData");
 void log(const ImuData &value, const char *label = "ImuData");
-void log(const ReceiverData &value, const char *label = "Control");
+void log(const PPMCommand &value, const char *label = "PPMCommand");
 void log(const MTF02Data &value, const char *label = "MTF02");
 }
 

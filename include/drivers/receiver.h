@@ -3,27 +3,37 @@
 
 #include <Arduino.h>
 #include <PulsePosition.h>
+#include "interfaces.h"
 
 #define PPM_PIN 6
 
-struct ReceiverData {
-    float ThrottleIn = 1000.0f;
-    float RollIn = 1500.0f;
-    float YawIn = 1500.0f;
-    float PitchIn = 1500.0f;
-    float AuxChannel5In = 1000.0f;
-    float AuxChannel6In = 1000.0f;
+struct PPMCommand {
+    float C1 = 1500.0f;
+    float C2 = 1500.0f;
+    float C3 = 1000.0f;
+    float C4 = 1500.0f;
+    float C5 = 1000.0f;
+    float C6 = 1000.0f;
 };
 
-class Receiver {
-public:
-    Receiver();
+struct RPICommand {
+};
 
-    ReceiverData recv();
-    ReceiverData to_anglemode(ReceiverData data);
+class PPMReceiver : public ReceiverDriver {
+public:
+    PPMReceiver();
+
+    bool read(PPMCommand &cmd) override;
+    bool read(RPICommand &cmd) override;
 
 private:
     PulsePositionInput in;
+};
+
+class RPIReceiver : public ReceiverDriver {
+public:
+    bool read(PPMCommand &cmd) override;
+    bool read(RPICommand &cmd) override;
 };
 
 #endif

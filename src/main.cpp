@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "devices/imu.h"
 #include "devices/motor.h"
+#include "devices/receiver.h"
 #include "drivers/motors.h"
 #include "drivers/mtf02.h"
 #include "drivers/ms5611.h"
@@ -18,10 +19,9 @@ ImuData imu_data;
 
 Madgwick madgw;
 
-Receiver receiver;
-
-ReceiverData control_raw;
-ReceiverData control_cmd;
+PPMReceiver ppm_receiver;
+Receiver receiver(ppm_receiver);
+PPMCommand control_raw;
 
 Motor motor;
 MotorDevice motor_device(motor);
@@ -61,9 +61,9 @@ void setup() {
 
   // Safety lock: arm loop only after throttle is low.
   do {
-    control_raw = receiver.recv();
+    receiver.read(control_raw);
     delay(10);
-  } while (control_raw.ThrottleIn > 1050.0f);
+  } while (control_raw.C3 > 1050.0f);
 }
 
 void loop() {
@@ -75,15 +75,18 @@ void loop() {
   }
   madgw.update(imu_data);
 
-  ReceiverData rd = receiver.recv();
-  rd = receiver.to_anglemode(rd);       //IMPORTANT: forgetting this line will cause drone to fly away
+  PPMCommand cmd_raw{};
+  if (!receiver.read(cmd_raw)) {
+    // Placeholder: optional receiver read error handling.
+  }
+  PPMCommand rd = receiver.to_anglemode(cmd_raw);       //IMPORTANT: forgetting this line will cause drone to fly away
 
   
   // calculate errors
 
   EulerAngle e = quaternionToEuler(madgw.q);  
-  double pitch_error = rd.PitchIn - (e.pitch * DEG_PER_RAD + 0.3); // some sensor mount calibration
-  double roll_error = rd.RollIn - (e.roll * DEG_PER_RAD + 4.5);
+  double pitch_error = rd.C2 - (e.pitch * DEG_PER_RAD + 0.3); // some sensor mount calibration
+  double roll_error = rd.C4 - (e.roll * DEG_PER_RAD + 4.5);
 
   double pitchrate_target, rollrate_target;
 
@@ -101,7 +104,7 @@ void loop() {
   }
   
 
-  double yawrate_target = 2.8*rd.YawIn;
+  double yawrate_target = 2.8*rd.C1;
 
   EulerAngle euler_rate_target;
   euler_rate_target.pitch = pitchrate_target;
@@ -119,8 +122,8 @@ void loop() {
 
   // Output to motor, lock until throttle is not 0
 
-  if (rd.ThrottleIn > 0.01 && rd.ThrottleIn <= 1.0){
-    motor_device.command_motor(rd.ThrottleIn, pitchadjust, rolladjust, yawadjust);
+  if (rd.C3 > 0.01 && rd.C3 <= 1.0){
+    motor_device.command_motor(rd.C3, pitchadjust, rolladjust, yawadjust);
   } else {
     motor.set_motor(MotorCommand{});
     x_rate_pid.reset();

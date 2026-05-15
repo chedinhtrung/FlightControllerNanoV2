@@ -1,77 +1,59 @@
 #include "drivers/receiver.h"
 
-Receiver::Receiver() {
+PPMReceiver::PPMReceiver() {
     in.begin(PPM_PIN);
 }
 
-ReceiverData Receiver::recv() {
-    ReceiverData data;
-    data.ThrottleIn = in.read(3);    // Channel 3 = throttle
-    data.RollIn = in.read(4);        // Channel 4 = roll
-    data.YawIn = in.read(1);         // Channel 1 = yaw
-    data.PitchIn = in.read(2);       // Channel 2 = pitch
-    data.AuxChannel5In = in.read(5); // Aux Channel 5
-    data.AuxChannel6In = in.read(6); // Aux Channel 6
+bool PPMReceiver::read(PPMCommand &cmd) {
+    cmd.C1 = in.read(1);
+    cmd.C2 = in.read(2);
+    cmd.C3 = in.read(3);
+    cmd.C4 = in.read(4);
+    cmd.C5 = in.read(5);
+    cmd.C6 = in.read(6);
 
     // Prevent zeroes at startup
-    if (data.ThrottleIn < 1000.0f) {
-        data.ThrottleIn = 1000.0f;
-    } else if (data.ThrottleIn > 2000.0f) {
-        data.ThrottleIn = 2000.0f;
+    if (cmd.C3 < 1000.0f) {
+        cmd.C3 = 1000.0f;
+    } else if (cmd.C3 > 2000.0f) {
+        cmd.C3 = 2000.0f;
     }
 
-    if (data.RollIn < 900.0f) {
-        data.RollIn = 1500.0f;
-    } else if (data.RollIn > 2000.0f) {
-        data.RollIn = 2000.0f;
+    if (cmd.C4 < 900.0f) {
+        cmd.C4 = 1500.0f;
+    } else if (cmd.C4 > 2000.0f) {
+        cmd.C4 = 2000.0f;
     }
 
-    if (data.PitchIn < 900.0f) {
-        data.PitchIn = 1500.0f;
-    } else if (data.PitchIn > 2000.0f) {
-        data.PitchIn = 2000.0f;
+    if (cmd.C2 < 900.0f) {
+        cmd.C2 = 1500.0f;
+    } else if (cmd.C2 > 2000.0f) {
+        cmd.C2 = 2000.0f;
     }
 
-    if (data.YawIn < 900.0f) {
-        data.YawIn = 1500.0f;
-    } else if (data.YawIn > 2000.0f) {
-        data.YawIn = 2000.0f;
+    if (cmd.C1 < 900.0f) {
+        cmd.C1 = 1500.0f;
+    } else if (cmd.C1 > 2000.0f) {
+        cmd.C1 = 2000.0f;
     }
 
-    return data;
+    return true;
 }
 
-ReceiverData Receiver::to_anglemode(ReceiverData data) {
-    // Convert controller input to desired angle/rate
-    data.PitchIn = (-data.PitchIn + 1500.0f) / 1000.0f * 90.0f;
-    data.RollIn = (data.RollIn - 1500.0f) / 1000.0f * 90.0f;
-    data.YawIn = (data.YawIn - 1500.0f) / 1000.0f * 80.0f - 0.06f;
+bool PPMReceiver::read(RPICommand &cmd) {
+    (void)cmd;
+    // Placeholder: PPM driver does not produce RPI command packets.
+    return false;
+}
 
-    data.ThrottleIn = (data.ThrottleIn - 1000.0f) / 1000.0f;
+bool RPIReceiver::read(PPMCommand &cmd) {
+    (void)cmd;
+    // Placeholder: RPI driver does not produce PPM command packets.
+    return false;
+}
 
-    if (data.ThrottleIn > 1.0f) {
-        data.ThrottleIn = 1.0f;
-    } else if (data.ThrottleIn < 0.0f) {
-        data.ThrottleIn = 0.0f;
-    }
-
-    if (data.PitchIn > 35.0f) {
-        data.PitchIn = 35.0f;
-    } else if (data.PitchIn < -35.0f) {
-        data.PitchIn = -35.0f;
-    }
-
-    if (data.RollIn > 35.0f) {
-        data.RollIn = 35.0f;
-    } else if (data.RollIn < -35.0f) {
-        data.RollIn = -35.0f;
-    }
-
-    if (data.YawIn > 30.0f) {
-        data.YawIn = 30.0f;
-    } else if (data.YawIn < -30.0f) {
-        data.YawIn = -30.0f;
-    }
-
-    return data;
+bool RPIReceiver::read(RPICommand &cmd) {
+    (void)cmd;
+    // Placeholder: RPI transport decode to be implemented.
+    return false;
 }
