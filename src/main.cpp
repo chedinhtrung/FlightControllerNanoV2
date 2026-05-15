@@ -77,7 +77,6 @@ void setup() {
 void loop() {
   last_active = micros();
 
-  imu_device.update();
   if (!imu_device.read(imu_data)) {
     // Placeholder: optional IMU read error handling.
   }
@@ -131,7 +130,7 @@ void loop() {
   // Output to motor, lock until throttle is not 0
 
   if (rd.C3 > 0.01 && rd.C3 <= 1.0){
-    motor_device.command_motor(rd.C3, pitchadjust, rolladjust, yawadjust);
+    motor_device.write(rd.C3, pitchadjust, rolladjust, yawadjust);
   } else {
     motor.set_motor(MotorCommand{});
     x_rate_pid.reset();
@@ -140,14 +139,14 @@ void loop() {
     //alt.filter.reset();
   }
 
-  barometer.update();
+  barometer.kick();
   if (barometer.read(baro_data)) {
     Serial.printf("alt_m: %.3f\n", baro_data.altitude_m);
   }
 
   // Low priority parse window: consume bytes while data is pending and loop time remains.
   while (optical_flow.has_bytes() && (micros() - last_active) < (PERIOD_US - 200)) {
-    optical_flow.parse();
+    optical_flow.kick();
   }
   if (optical_flow.read(mtf02_data)) {
     debug::log(mtf02_data, "optical_flow");

@@ -13,12 +13,14 @@ public:
     virtual ~ImuDriver() = default;
     virtual bool setup() = 0;
     virtual bool read(ImuData &data) = 0;
+    virtual bool write() { return false; }
 };
 
 class MotorDriver {
 public:
     virtual ~MotorDriver() = default;
     virtual void set_motor(const MotorCommand &cmd) = 0;
+    virtual bool write() { return false; }
 };
 
 class ReceiverDriver {
@@ -26,6 +28,7 @@ public:
     virtual ~ReceiverDriver() = default;
     virtual bool read(PPMCommand &cmd) = 0;
     virtual bool read(RPICommand &cmd) = 0;
+    virtual bool write() { return false; }
 };
 
 class BarometerDriver {
@@ -34,6 +37,7 @@ public:
     virtual bool setup() = 0;
     virtual void kick() = 0;
     virtual bool read(BaroData &data) = 0;
+    virtual bool write() { return false; }
 };
 
 class OpticalFlowDriver {
@@ -43,6 +47,7 @@ public:
     virtual bool parse() = 0;
     virtual bool has_bytes() const = 0;
     virtual bool read(MTF02Data &data) = 0;
+    virtual bool write() { return false; }
 };
 
 #endif

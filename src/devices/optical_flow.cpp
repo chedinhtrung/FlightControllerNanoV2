@@ -10,7 +10,7 @@ bool OpticalFlow::setup() {
     return true;
 }
 
-bool OpticalFlow::parse() {
+bool OpticalFlow::kick() {
     return driver_.parse();
 }
 

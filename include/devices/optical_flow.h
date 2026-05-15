@@ -9,7 +9,7 @@ public:
     explicit OpticalFlow(OpticalFlowDriver &driver);
 
     bool setup();
-    bool parse();
+    bool kick();
     bool has_bytes() const;
     bool read(MTF02Data &out);
 

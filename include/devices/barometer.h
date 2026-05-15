@@ -15,7 +15,7 @@ public:
     explicit Barometer(BarometerDriver &driver, uint32_t period_us = BARO_ALT_PERIOD_US);
 
     bool setup();
-    void update();
+    void kick();
     bool read(BaroData &out);
 
 private:

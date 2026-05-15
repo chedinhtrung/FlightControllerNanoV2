@@ -13,7 +13,7 @@ bool Barometer::setup() {
     return calibrate();
 }
 
-void Barometer::update() {
+void Barometer::kick() {
     const uint32_t now = micros();
     if ((uint32_t)(now - last_kick_us_) < period_us_) {
         return;
