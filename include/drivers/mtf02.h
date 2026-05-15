@@ -1,0 +1,51 @@
+#ifndef MTF02_H
+#define MTF02_H
+
+#include <Arduino.h>
+
+struct MTF02Data {
+    uint32_t time_ms = 0;
+    uint32_t distance_mm = 0;
+    uint8_t strength = 0;
+    uint8_t precision = 0;
+    uint8_t distance_status = 0;
+    int16_t flow_vel_x = 0;
+    int16_t flow_vel_y = 0;
+    uint8_t flow_quality = 0;
+    uint8_t flow_status = 0;
+};
+
+class MTF02 {
+public:
+    explicit MTF02(HardwareSerial &serial);
+
+    void setup(uint32_t baud = 115200);
+    void kick();
+    bool read(MTF02Data &out);
+
+private:
+    static constexpr uint8_t kHead = 0xEF;
+    static constexpr uint8_t kRangeMsgId = 0x51;
+    static constexpr uint8_t kMaxPayloadLen = 64;
+
+    HardwareSerial &serial_;
+    MTF02Data flow_data_{};
+    bool has_new_sample_ = false;
+
+    uint8_t status_ = 0;
+    uint8_t dev_id_ = 0;
+    uint8_t sys_id_ = 0;
+    uint8_t msg_id_ = 0;
+    uint8_t seq_ = 0;
+    uint8_t len_ = 0;
+    uint8_t checksum_ = 0;
+    uint8_t payload_[kMaxPayloadLen] = {0};
+    uint8_t payload_cnt_ = 0;
+
+    bool parse_char(uint8_t byte_in);
+    bool decode_current_frame();
+    bool checksum_ok() const;
+    void reset_parser();
+};
+
+#endif

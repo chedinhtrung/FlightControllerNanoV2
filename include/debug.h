@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "datastructs.h"
+#include "drivers/mtf02.h"
 #include "drivers/mpu9250.h"
 #include "drivers/receiver.h"
 
@@ -14,6 +15,7 @@ void log(const Quaternion &value, const char *label = "Quaternion");
 void log(const RawImuData &value, const char *label = "RawImuData");
 void log(const ImuData &value, const char *label = "ImuData");
 void log(const ReceiverData &value, const char *label = "Control");
+void log(const MTF02Data &value, const char *label = "MTF02");
 }
 
 #endif
