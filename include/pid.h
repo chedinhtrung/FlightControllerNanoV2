@@ -33,32 +33,36 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.0005, 1e-4, 2.5e-7);
+    PID y_rate_pid = PID(0.0008, 1e-4, 3e-7);
     ;
-    PID x_rate_pid = PID(0.0005, 1e-4, 2.5e-7);
-    PID z_rate_pid = PID(0.0018, 1.2e-4, 0);
+    PID x_rate_pid = PID(0.0009, 1e-4, 3.5e-7);
+    PID z_rate_pid = PID(0.003, 1.2e-4, 0);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
     void reset();
 
     inline float angle_error_to_angle_rate(float angle)
     {
-        // Angle should be in degrees. Computes the desired angle using a custom non linear curve
-        float abs_angle = abs(angle);
-        float mult = 1;
-        if (abs_angle < 4)
-        {
-            mult = 1.7f;
-        }
-        else if (abs_angle >= 4 && abs_angle < 8)
-        {
-            mult = 3.0f;
-        }
-        else
-        {
-            mult = 2.0f;
-        }
-        return angle * mult;
+        float a = fabsf(angle);
+
+    float mult;
+
+    if (a < 4.0f) {
+        mult = 1.5f;
+    } else if (a < 8.0f) {
+        float t = (a - 4.0f) / 4.0f;
+        mult = 1.5f + t * (4.0f - 1.5f);
+    } else if (a < 15.0f) {
+        float t = (a - 8.0f) / 7.0f;
+        mult = 3.0f + t * (2.0f - 4.0f);
+    } else {
+        mult = 2.0f;
+    }
+
+    float rate = angle * mult;
+
+    constexpr float MAX_RATE_DPS = 120.0f;
+    return constrain(rate, -MAX_RATE_DPS, MAX_RATE_DPS);
     }
 };
 
