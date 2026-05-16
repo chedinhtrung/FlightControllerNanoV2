@@ -58,18 +58,11 @@ MotorAdjust AttiStabilizer::compute_rpy_adjust(Quaternion q, EulerAngle target, 
 
     float pitchrate_target, rollrate_target;
 
-    // use square root curve to calculate desired rates
-    if (pitch_error >= 0){
-        pitchrate_target = pitch_error/(0.025*sqrt(pitch_error) + 0.45);
-    } else {
-        pitchrate_target = pitch_error/(0.025*sqrt(-pitch_error) + 0.45);
-    }
+    // use nonlinear curve to calculate desired rates
+    pitchrate_target = angle_error_to_angle_rate(pitch_error);
+    
 
-    if (roll_error >= 0){
-        rollrate_target = roll_error/(0.018*sqrt(roll_error) + 0.45);;
-    } else {
-        rollrate_target = roll_error/(0.018*sqrt(-roll_error) + 0.45);
-    }
+    rollrate_target = angle_error_to_angle_rate(roll_error);
     
 
     float yawrate_target = 2.8*target.yaw;
@@ -102,3 +95,5 @@ void AttiStabilizer::reset(){
     y_rate_pid.reset();
     z_rate_pid.reset();
 }
+
+ 

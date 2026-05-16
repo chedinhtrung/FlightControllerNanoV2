@@ -1,6 +1,8 @@
 #ifndef MATHUTILS
 #define MATHUTILS
 #include "datastructs.h"
+#include <math.h>
+#include "config.h"
 
 inline EulerAngle to_deg(const EulerAngle &e)
 {
