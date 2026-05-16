@@ -53,8 +53,8 @@ MotorAdjust AttiStabilizer::compute_rpy_adjust(Quaternion q, EulerAngle target, 
 
     EulerAngle e = quaternionToEuler(q);  
 
-    float pitch_error = target.pitch - (e.pitch * DEG_PER_RAD + 0.3); // some sensor mount calibration
-    float roll_error = target.roll - (e.roll * DEG_PER_RAD + 4.5);
+    float pitch_error = target.pitch - (e.pitch * DEG_PER_RAD); // some sensor mount calibration
+    float roll_error = target.roll - (e.roll * DEG_PER_RAD);
 
     float pitchrate_target, rollrate_target;
 

@@ -1,6 +1,7 @@
 #include "drivers/mpu9250.h"
 #include "Wire.h"
 #include <Arduino.h>
+#include <float.h>
 
 namespace {
 constexpr uint8_t REG_WHO_AM_I      = 0x75; // Device identity register (expected 0x71 for MPU9250)
@@ -105,7 +106,6 @@ bool MPU9250::setup(){
 }
 
 void MPU9250::calibrate(){
-    accel_bias_g = {};
     gyro_bias = {};
 
     constexpr int kSamples = 1000;
@@ -154,8 +154,6 @@ bool MPU9250::read(ImuData &data) {
     };
 
     gyro_base = (gyro_base - gyro_bias);
-    accel_base = (accel_base - accel_bias_g);
-
     const float gyro_arr[3] = {gyro_base.x, gyro_base.y, gyro_base.z};
     const float accel_arr[3] = {accel_base.x, accel_base.y, accel_base.z};
 
@@ -173,5 +171,8 @@ bool MPU9250::read(ImuData &data) {
     data.accel *= ORIENTATION_SIGN;
     data.gyro *= ORIENTATION_SIGN;
     data.gyro *= RAD_PER_DEG;  // Convert to radian
+
+    data.accel -= accel_bias_g;
+    data.accel *= accel_scale;
     return true;
 }

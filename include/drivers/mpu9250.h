@@ -1,4 +1,4 @@
-#ifndef IMU 
+#ifndef IMU
 #define IMU
 
 #include "config.h"
@@ -18,23 +18,35 @@
 #define IMU_MAP_Z_SRC 2
 #define IMU_MAP_Z_SIGN 1
 
-struct RawImuData {
+struct RawImuData
+{
     VectInt16 accel;
     VectInt16 gyro;
 };
 
-struct ImuData {
-    Vec3 gyro; 
+struct ImuData
+{
+    Vec3 gyro;
     Vec3 accel;
 };
 
-class MPU9250 : public ImuDriver {
-    public: 
-        // Raw values for data gathering
-        RawImuData raw;
-        
-        Vec3 accel_bias_g {0, 0, 0};
-        Vec3 gyro_bias;
+class MPU9250 : public ImuDriver
+{
+public:
+    // Raw values for data gathering
+    RawImuData raw;
+
+    Vec3 accel_bias_g = {
+        -0.065f, // x
+        0.120f,  // y
+        -0.035f  // z
+    };
+    Vec3 accel_scale = {
+        0.995025f, // x
+        1.000000f, // y
+        0.995025f  // z
+    };
+    Vec3 gyro_bias;
 
         bool setup() override;
         void calibrate();
@@ -42,4 +54,4 @@ class MPU9250 : public ImuDriver {
         
 };
 
-#endif 
+#endif
