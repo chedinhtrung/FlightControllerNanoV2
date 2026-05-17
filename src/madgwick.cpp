@@ -28,7 +28,7 @@ void Madgwick::update(const ImuData& imu)
         2.0f * q.x, 2.0f * q.y, 0.0f};
 
     BLA::Matrix<3, 1> error = {
-        2.0f * (q.x * q.z - q.w * q.y) + imu.accel.x,
+        2.0f * (q.x * q.z - q.w * q.y) + imu.accel.x,         // + instead of - because accels measure the opposite
         2.0f * (q.w * q.x + q.y * q.z) + imu.accel.y,
         2.0f * (0.5f - q.x * q.x - q.y * q.y) + imu.accel.z};
 

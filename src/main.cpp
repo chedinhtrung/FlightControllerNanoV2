@@ -108,17 +108,17 @@ void loop() {
   }
 
   barometer.kick();
-  if (barometer.read(baro_data)) {
-    Serial.printf("alt_m: %.3f\n", baro_data.altitude_m);
-  }
-
+  barometer.read(baro_data);
+  
   // Low priority parse window: consume bytes while data is pending and loop time remains.
   while (optical_flow.has_bytes() && (micros() - last_active) < (PERIOD_US - 200)) {
     optical_flow.kick();
+    optical_flow.read(mtf02_data);
   }
-  if (optical_flow.read(mtf02_data)) {
-    debug::log(mtf02_data, "optical_flow");
-  }
+
+  //debug::log(mtf02_data, "optical_flow");
+  Vec3 v_body = optical_flow.get_compensated_v1frame_vxy(mtf02_data, imu_data.gyro, madgw.q);
+  //debug::log(mtf02_data);
 
   while(micros() - last_active < DT*1e6){}
   
