@@ -87,10 +87,10 @@ bool MPU9250::setup(){
     writeRegister(REG_PWR_MGMT_2, 0x00);
 
     // Gyro DLPF_CFG = 1 (~184 Hz BW, 1 kHz internal sample rate).
-    writeRegister(REG_CONFIG, 0x01);
+    writeRegister(REG_CONFIG, 0x00);
 
     // Sample rate = internal_rate/(1+SMPLRT_DIV) = 1kHz/(1+2) = 333 Hz
-    writeRegister(REG_SMPLRT_DIV, 0x02);
+    writeRegister(REG_SMPLRT_DIV, 0x01);
 
     // GYRO_FS_SEL = 0 => +-250 dps (131 LSB/dps).
     writeRegister(REG_GYRO_CONFIG, 0x00);
@@ -99,7 +99,7 @@ bool MPU9250::setup(){
     writeRegister(REG_ACCEL_CONFIG, 0x08);
 
     // Accel DLPF: A_DLPFCFG = 1 (~184 Hz), FCHOICE_B = 0.
-    writeRegister(REG_ACCEL_CONFIG2, 0x01);
+    writeRegister(REG_ACCEL_CONFIG2, 0x02);
 
     calibrate();
     return true;
