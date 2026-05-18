@@ -14,6 +14,7 @@
 #include "drivers/receiver.h"
 #include "madgwick.h"
 #include "pid.h"
+#include "velocity_kf.h"
 
 MPU9250 imu;
 Imu imu_device(imu);
@@ -36,7 +37,11 @@ MTF02 mtf02(Serial3);
 OpticalFlow optical_flow(mtf02);
 MTF02Data mtf02_data;
 
-AttiStabilizer atti_stabilizer;
+VelKF2 vel_kf = VelKF2();
+Vec3LPF vel_ctl_lpf = Vec3LPF(0.2);
+
+AttiStabilizer atti_stabilizer = AttiStabilizer();
+VelStabilizer  vel_stabilizer = VelStabilizer();
 
 unsigned long last_active = micros();
 
@@ -80,6 +85,7 @@ void loop() {
     // Placeholder: optional IMU read error handling.
   }
   madgw.update(imu_data);
+  vel_kf.predict(imu_data.accel, madgw.q);
 
   PPMCommand cmd_raw{};
   if (!receiver.read(cmd_raw)) {
@@ -87,15 +93,22 @@ void loop() {
   }
   PPMCommand rd = receiver.normalize(cmd_raw);       //IMPORTANT: forgetting this line will cause drone to fly away
 
-  EulerAngle target {
-    .yaw = rd.C1,
-    .pitch = rd.C2, 
-    .roll = rd.C4
+  Vec3 vel_target {
+    rd.C2 * -0.025f, 
+    rd.C4 * 0.025f,
+    rd.C1
   };
 
   // calculate errors
 
-  MotorAdjust m_adjust = atti_stabilizer.compute_rpy_adjust(madgw.q, target, imu_data.gyro);
+  Vec3 v_est = vel_kf.velocity();
+  v_est = vel_ctl_lpf.update(v_est);
+
+  EulerAngle angle_target = vel_stabilizer.vel_error_to_angle_target(vel_target - v_est, vel_target.z);
+
+  //debug::plot(angle_target);
+
+  MotorAdjust m_adjust = atti_stabilizer.compute_rpy_adjust(madgw.q, angle_target, imu_data.gyro);
 
   // Output to motor, lock until throttle is not 0
 
@@ -104,6 +117,7 @@ void loop() {
   } else {
     motor.set_motor(MotorCommand{});
     atti_stabilizer.reset();
+    vel_stabilizer.reset();
     //alt.filter.reset();
   }
 
@@ -117,8 +131,8 @@ void loop() {
   }
 
   //debug::log(mtf02_data, "optical_flow");
-  Vec3 v_body = optical_flow.get_compensated_v1frame_vxy(mtf02_data, imu_data.gyro, madgw.q);
-  //debug::log(mtf02_data);
+  Vec3 v_v1 = optical_flow.get_compensated_v1frame_vxy(mtf02_data, imu_data.gyro, madgw.q);
+  vel_kf.updateFlow(v_v1, imu_data.gyro, mtf02_data.flow_quality);
 
   while(micros() - last_active < DT*1e6){}
   

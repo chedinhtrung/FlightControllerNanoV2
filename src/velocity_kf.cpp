@@ -91,7 +91,7 @@ void VelKF2::updateFlow(const Vec3 &v_v1, Vec3 gyro, float quality)
     // More rotation -> less confidence.
     // Tune GYRO_REF. At gyro_mag == GYRO_REF,
     // sigma roughly doubles from this term.
-    constexpr float GYRO_REF = 0.6f; // rad/s
+    constexpr float GYRO_REF = 0.7f; // rad/s
     float gyro_scale = 1.0f + gyro_mag / GYRO_REF;
 
     float sigma_eff = flow_sigma * quality_scale * gyro_scale;
@@ -122,8 +122,14 @@ void VelKF2::update1D(float &xi, float &Pi, float zi, float Ri)
     // H = 1
     const float S = Pi + Ri;
 
-    if (S <= 1e-9f)
-    {
+    if (S <= 1e-9f) {return;}
+
+    // Innovation gate: reject measurement if too surprising.
+    // 3-sigma gate.
+    const float gate = 3.0f * sqrtf(S);
+    if (fabsf(y) > gate) {
+        // Optional: increase covariance slightly so filter can recover.
+        Pi += 0.02f;
         return;
     }
 

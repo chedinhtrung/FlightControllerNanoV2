@@ -31,15 +31,7 @@ float PID::calculate(float new_error) {
 
     last_error = new_error;
 
-    float pid_out = pterm + dterm + last_iterm;
-
-    if (pid_out > 0.4) {
-        pid_out = 0.4;
-    } else if (pid_out < -0.4) {
-        pid_out = -0.4;
-    }
-
-    return pid_out;
+    return pterm + dterm + last_iterm;
 }
 
 void PID::reset() {
@@ -82,9 +74,9 @@ MotorAdjust AttiStabilizer::compute_rpy_adjust(Quaternion q, EulerAngle target, 
     float yawadjust = z_rate_pid.calculate(body_rate_target.z - gyro.z * DEG_PER_RAD);
     
     return MotorAdjust {
-        .yaw = yawadjust,
-        .pitch  = pitchadjust,
-        .roll = rolladjust
+        .yaw = constrain(yawadjust, -0.4f, 0.4f),
+        .pitch  = constrain(pitchadjust, -0.4f, 0.4f),
+        .roll = constrain(rolladjust, -0.4f, 0.4f)
     };
     
 }
@@ -95,5 +87,13 @@ void AttiStabilizer::reset(){
     y_rate_pid.reset();
     z_rate_pid.reset();
 }
+
+void VelStabilizer::reset(){
+    vx_pid_l1.reset();
+    vy_pid_l1.reset();
+    vx_pid_l2.reset();
+    vy_pid_l2.reset();
+}
+
 
  

@@ -43,7 +43,7 @@ Vec3 OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const V
 
     const float range_m = 0.001f * static_cast<float>(flowdata.dist_mm);
 
-    if (range_m < 0.02f || range_m > 3.0f ||
+    if (range_m < 0.004f || range_m > 5.0f ||
         flowdata.flow_status != 1 ||
         flowdata.dist_status != 1)
     {
@@ -81,7 +81,7 @@ Vec3 OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const V
 
     // Corrected COM velocity, expressed in body/sensor axes.
     Vec3 v_body = compensated_flow * range_m;
-    v_body -= cross(scaled_gyro, R_G_TO_FLOW);
+    v_body -= cross(filtered_gyro, R_G_TO_FLOW);
 
     
 
