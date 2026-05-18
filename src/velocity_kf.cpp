@@ -85,16 +85,13 @@ void VelKF2::updateFlow(const Vec3 &v_v1, const Vec3& gyro, float quality, float
     float quality_scale = 1.0f / (0.15f + 0.85f * q_norm);
 
     // gyro magnitude, rad/s
-    float gyro_mag = sqrtf(
-        gyro.x * gyro.x +
-        gyro.y * gyro.y +
-        gyro.z * gyro.z);
 
     // More rotation -> less confidence.
     // Tune GYRO_REF. At gyro_mag == GYRO_REF,
     // sigma roughly doubles from this term.
-    constexpr float GYRO_REF = 1.2f; // rad/s
-    float gyro_scale = 1.0f + gyro_mag / GYRO_REF;
+    constexpr float GYRO_REF = 1.0f; // rad/s
+    float gyro_scale_x = 1.0f + sqrt(gyro.x * gyro.x + gyro.z * gyro.z * 0.09) / GYRO_REF;
+    float gyro_scale_y = 1.0f + fabs(gyro.y) / GYRO_REF;
 
      // Height-based trust reduction.
     //
@@ -115,15 +112,18 @@ void VelKF2::updateFlow(const Vec3 &v_v1, const Vec3& gyro, float quality, float
         height_scale = 1.0f + t * (MAX_HEIGHT_SCALE - 1.0f);
     }
 
-    float sigma_eff = flow_sigma * quality_scale * gyro_scale * height_scale;
+    float sigma_eff_x = flow_sigma * quality_scale * gyro_scale_y * height_scale;
+    float sigma_eff_y = flow_sigma * quality_scale * gyro_scale_x * height_scale;
 
     // Optional hard cap so R does not explode numerically.
-    sigma_eff = constrain(sigma_eff, flow_sigma, 3.0f);
+    sigma_eff_x = constrain(sigma_eff_x, flow_sigma, 3.0f);
+    sigma_eff_y = constrain(sigma_eff_y, flow_sigma, 3.0f);
 
-    const float R = sigma_eff * sigma_eff;
+    const float Rx = sigma_eff_x * sigma_eff_x;
+    const float Ry = sigma_eff_y * sigma_eff_y;
 
-    update1D(x[0], P[0], v_v1.x, R);
-    update1D(x[1], P[1], v_v1.y, R);
+    update1D(x[0], P[0], v_v1.x, Rx);
+    update1D(x[1], P[1], v_v1.y, Ry);
 }
 
 Vec3 VelKF2::velocity() const

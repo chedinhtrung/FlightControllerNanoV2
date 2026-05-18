@@ -102,7 +102,6 @@ void loop()
     optical_flow.read(mtf02_data);
   }
 
-  // debug::log(mtf02_data, "optical_flow");
   bool flow_ok =
       mtf02_data.dist_status == 1 &&
       mtf02_data.flow_status == 1 &&
@@ -130,10 +129,9 @@ void loop()
   // calculate errors
 
   Vec3 v_est = vel_kf.velocity();
-  v_est = vel_ctl_lpf.update(v_est);
 
   bool airborne =
-      rd.C3 > 0.2f &&
+      //rd.C3 > 0.2f &&
       mtf02_data.dist_status == 1 &&
       mtf02_data.dist_mm > 30;
   
@@ -155,6 +153,9 @@ void loop()
     Vec3 v_est = vel_ctl_lpf.update(vel_kf.velocity());
     angle_target_vel = vel_stabilizer.vel_error_to_angle_target(vel_target - v_est, vel_target.z);
   }
+
+  debug::plot(v_est);
+
   float authority = vel_stabilizer.velHoldAuthorityFromHeight(mtf02_data.dist_mm * 1e-3);
   
   EulerAngle angle_target; 
@@ -162,6 +163,7 @@ void loop()
   angle_target.pitch = angle_target_vel.pitch * authority + angle_target_stick.pitch * (1 - authority);
   angle_target.roll = angle_target_vel.roll * authority + angle_target_stick.roll * (1 - authority);
   
+  //debug::plot(angle_target);
 
   MotorAdjust m_adjust = atti_stabilizer.compute_rpy_adjust(madgw.q, angle_target, imu_data.gyro);
 

@@ -70,7 +70,7 @@ Vec3 OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const V
         const float q_clamped = constrain(q_norm, 0.0f, 1.0f);
         gyro_multiplier = q_clamped * GYRO_MULTIPLIER_MAX;
         */
-        gyro_multiplier = 1.9f;
+        gyro_multiplier = 1.0f;
     }
 
     const Vec3 scaled_gyro = filtered_gyro * gyro_multiplier;
