@@ -34,7 +34,7 @@ class AttiStabilizer
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
     PID y_rate_pid = PID(0.0008, 1e-4, 3e-7);
-    PID x_rate_pid = PID(0.0009, 1e-4, 3.5e-7);
+    PID x_rate_pid = PID(0.0009, 1e-4, 3e-7);
     PID z_rate_pid = PID(0.003, 1.2e-4, 0);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
@@ -75,31 +75,99 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(25.0f, 2e-4f, 0.2f);
-    PID vy_pid_l1 = PID(25.0f, 2e-4f, 0.2f);
+    PID vx_pid_l1 = PID(15.0f, 8e-5f, 0.0f);
+    PID vy_pid_l1 = PID(25.0f, 8e-5f, 0.0f);
 
-    PID vx_pid_l2 = PID(50.0f, 1e-4f, 0.1f);
-    PID vy_pid_l2 = PID(50.0f, 1e-4f, 0.1f);
+    PID vx_pid_l2 = PID(35.0f, 6e-6f, 0.0f);
+    PID vy_pid_l2 = PID(35.0f, 6e-6f, 0.0f);
 
 public:
-    inline float deadband(float x, float db)
+    inline float deadband_x(float x)
     {
-        return (fabsf(x) < db) ? 0.0f : x;
+        constexpr float DB_ENTER = 0.05f;
+        constexpr float DB_EXIT = 0.08f;
+
+        static bool in_deadband = true;
+
+        const float ax = fabsf(x);
+
+        if (in_deadband)
+        {
+            if (ax > DB_EXIT)
+                in_deadband = false;
+        }
+        else
+        {
+            if (ax < DB_ENTER)
+                in_deadband = true;
+        }
+
+        return in_deadband ? 0.0f : x;
     }
 
-    inline float blend(float a, float b, float t)
+    inline float deadband_y(float y)
     {
-        return a + t * (b - a);
+        constexpr float DB_ENTER = 0.05f;
+        constexpr float DB_EXIT = 0.08f;
+
+        static bool in_deadband = true;
+
+        const float ax = fabsf(y);
+
+        if (in_deadband)
+        {
+            if (ax > DB_EXIT)
+                in_deadband = false;
+        }
+        else
+        {
+            if (ax < DB_ENTER)
+                in_deadband = true;
+        }
+
+        return in_deadband ? 0.0f : y;
+    }
+
+    inline float velHoldAuthorityFromHeight(float h_m)
+    {
+        // computes how much gain to adjust at different height
+        constexpr float FULL_H = 1.2f;     // full authority below this
+        constexpr float WEAK_H = 4.0f;     // weak authority above this
+        constexpr float MIN_SCALE = 0.25f; // keep some damping
+
+        if (h_m <= FULL_H)
+            return 1.0f;
+        if (h_m >= WEAK_H)
+            return MIN_SCALE;
+
+        float t = (h_m - FULL_H) / (WEAK_H - FULL_H);
+
+        // Smoothstep, nicer than linear.
+        t = t * t * (3.0f - 2.0f * t);
+
+        return 1.0f + t * (MIN_SCALE - 1.0f);
+    }
+
+    inline float slewLimit(float target, float current, float max_rate_dps, float dt)
+    {
+        float max_step = max_rate_dps * dt;
+        float delta = target - current;
+        delta = constrain(delta, -max_step, max_step);
+        return current + delta;
     }
 
     inline EulerAngle vel_error_to_angle_target(Vec3 v_error, float yawrate)
     {
-        constexpr float VEL_DEADBAND = 0.07f; // m/s
-        constexpr float SWITCH_VEL = 0.15f;   // m/s
-        constexpr float MAX_ANGLE = 25.0f;     // degrees, assuming your angle targets are deg
+        constexpr float VEL_DEADBAND = 0.06f;
+        constexpr float SWITCH_VEL = 0.25f;
+        constexpr float MAX_ANGLE = 20.0f;
+        constexpr float MAX_SLEW_DPS = 60.0f;
 
-        v_error.x = deadband(v_error.x, VEL_DEADBAND);
-        v_error.y = deadband(v_error.y, VEL_DEADBAND);
+        static float last_pitch = 0.0f;
+        static float last_roll = 0.0f;
+
+        v_error.x = deadband_x(v_error.x);
+        v_error.y = deadband_y(v_error.y);
 
         // Blend factor: 0 = low-error PID, 1 = high-error PID
         float tx = constrain(fabsf(v_error.x) / SWITCH_VEL, 0.0f, 1.0f);
@@ -116,6 +184,12 @@ public:
 
         pitch_target = constrain(pitch_target, -MAX_ANGLE, MAX_ANGLE);
         roll_target = constrain(roll_target, -MAX_ANGLE, MAX_ANGLE);
+
+        pitch_target = slewLimit(pitch_target, last_pitch, MAX_SLEW_DPS, DT);
+        roll_target = slewLimit(roll_target, last_roll, MAX_SLEW_DPS, DT);
+
+        last_pitch = pitch_target;
+        last_roll = roll_target;
 
         return EulerAngle{
             yawrate,

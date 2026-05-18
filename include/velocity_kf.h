@@ -32,7 +32,7 @@ struct VelKF2
     // Measurement update:
     // z = H x + noise
     // Here z = [vx_flow, vy_flow]^T and H = I.
-    void updateFlow(const Vec3& flow_v1, Vec3 gyro, float quality);
+    void updateFlow(const Vec3& flow_v1, const Vec3& gyro, float quality, float range_m);
 
     Vec3 velocity() const;
 

@@ -64,10 +64,13 @@ Vec3 OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const V
     float gyro_multiplier = 0.0f;
     if (flowdata.flow_quality >= FLOW_QUALITY_MIN)
     {
+        /*
         const float q_norm = (static_cast<float>(flowdata.flow_quality) - FLOW_QUALITY_MIN) /
                              (FLOW_QUALITY_MAX - FLOW_QUALITY_MIN);
         const float q_clamped = constrain(q_norm, 0.0f, 1.0f);
         gyro_multiplier = q_clamped * GYRO_MULTIPLIER_MAX;
+        */
+        gyro_multiplier = 1.9f;
     }
 
     const Vec3 scaled_gyro = filtered_gyro * gyro_multiplier;

@@ -54,6 +54,8 @@ void VelKF2::predict(const Vec3 &accel, const Quaternion &q)
     // reject integration if dt is too stale 
     if (dt <= 0.0f || dt > 0.05f)
     {
+        P[0] += 0.05f;
+        P[1] += 0.05f;
         return;
     }
 
@@ -66,7 +68,7 @@ void VelKF2::predict(const Vec3 &accel, const Quaternion &q)
     P[1] += Q;
 }
 
-void VelKF2::updateFlow(const Vec3 &v_v1, Vec3 gyro, float quality)
+void VelKF2::updateFlow(const Vec3 &v_v1, const Vec3& gyro, float quality, float range_m)
 {
     // Measurement model:
     //
@@ -91,13 +93,32 @@ void VelKF2::updateFlow(const Vec3 &v_v1, Vec3 gyro, float quality)
     // More rotation -> less confidence.
     // Tune GYRO_REF. At gyro_mag == GYRO_REF,
     // sigma roughly doubles from this term.
-    constexpr float GYRO_REF = 0.7f; // rad/s
+    constexpr float GYRO_REF = 1.2f; // rad/s
     float gyro_scale = 1.0f + gyro_mag / GYRO_REF;
 
-    float sigma_eff = flow_sigma * quality_scale * gyro_scale;
+     // Height-based trust reduction.
+    //
+    // Below 1.2m: full trust.
+    // From 1.2m to 2.7m: gradually trust less.
+    // Above 2.7m: very weak trust.
+    constexpr float FULL_TRUST_H = 1.2f;
+    constexpr float WEAK_TRUST_H = 2.7f;
+    constexpr float MAX_HEIGHT_SCALE = 4.0f;
+
+    float height_scale = 1.0f;
+
+    if (range_m > FULL_TRUST_H) {
+        float t = (range_m - FULL_TRUST_H) / (WEAK_TRUST_H - FULL_TRUST_H);
+        t = constrain(t, 0.0f, 1.0f);
+
+        // sigma grows smoothly from 1x to 4x.
+        height_scale = 1.0f + t * (MAX_HEIGHT_SCALE - 1.0f);
+    }
+
+    float sigma_eff = flow_sigma * quality_scale * gyro_scale * height_scale;
 
     // Optional hard cap so R does not explode numerically.
-    sigma_eff = constrain(sigma_eff, flow_sigma, 2.0f);
+    sigma_eff = constrain(sigma_eff, flow_sigma, 3.0f);
 
     const float R = sigma_eff * sigma_eff;
 

@@ -125,9 +125,9 @@ inline Vec3 eulerRatesToBodyRates(const EulerAngle& attitude,
     return omega_body;
 }
 
-// Computes compensated velocity in Body frame adjusting for rotation
-inline Vec3 get_compensated_v(Vec3 v_flow_sensor, Vec3 gyro, Vec3 r_sensor_body){
-    return v_flow_sensor - cross(gyro, r_sensor_body);
-}
+inline float blend(float a, float b, float t)
+    {
+        return a + t * (b - a);
+    }
 
 #endif
