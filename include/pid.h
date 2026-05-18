@@ -76,10 +76,10 @@ class VelStabilizer
 {
 
     PID vx_pid_l1 = PID(15.0f, 8e-5f, 0.0f);
-    PID vy_pid_l1 = PID(25.0f, 8e-5f, 0.0f);
+    PID vy_pid_l1 = PID(15.0f, 8e-5f, 0.0f);
 
-    PID vx_pid_l2 = PID(35.0f, 6e-6f, 0.0f);
-    PID vy_pid_l2 = PID(35.0f, 6e-6f, 0.0f);
+    PID vx_pid_l2 = PID(25.0f, 6e-6f, 0.0f);
+    PID vy_pid_l2 = PID(25.0f, 6e-6f, 0.0f);
 
 public:
     inline float deadband_x(float x)
@@ -159,7 +159,7 @@ public:
     inline EulerAngle vel_error_to_angle_target(Vec3 v_error, float yawrate)
     {
         constexpr float VEL_DEADBAND = 0.06f;
-        constexpr float SWITCH_VEL = 0.25f;
+        constexpr float SWITCH_VEL = 0.20f;
         constexpr float MAX_ANGLE = 20.0f;
         constexpr float MAX_SLEW_DPS = 60.0f;
 

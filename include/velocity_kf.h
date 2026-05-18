@@ -17,7 +17,7 @@ struct VelKF2
 
     uint32_t last_update_us = micros();
 
-    VelKF2(float accel_sigma_ = 0.8f,
+    VelKF2(float accel_sigma_ = 1.0f,
            float flow_sigma_ = 0.15f,
            float initial_P_ = 1.0f);
 

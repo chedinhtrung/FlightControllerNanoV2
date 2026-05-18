@@ -131,7 +131,7 @@ void loop()
   Vec3 v_est = vel_kf.velocity();
 
   bool airborne =
-      //rd.C3 > 0.2f &&
+      rd.C3 > 0.2f &&
       mtf02_data.dist_status == 1 &&
       mtf02_data.dist_mm > 30;
   
@@ -154,7 +154,7 @@ void loop()
     angle_target_vel = vel_stabilizer.vel_error_to_angle_target(vel_target - v_est, vel_target.z);
   }
 
-  debug::plot(v_est);
+ 
 
   float authority = vel_stabilizer.velHoldAuthorityFromHeight(mtf02_data.dist_mm * 1e-3);
   
