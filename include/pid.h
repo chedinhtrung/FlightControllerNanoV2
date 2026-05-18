@@ -15,7 +15,7 @@ class PID
 {
 public:
     PID() = default;
-    PID(float p_term, float i_term, float d_term);
+    PID(float p_term, float i_term, float d_term, float i_lim = 0.1f, float d_lim = 0.12f);
 
     float calculate(float new_error);
     void reset();
@@ -24,6 +24,8 @@ private:
     float P = 0.0;
     float I = 0.0;
     float D = 0.0;
+    float I_LIM = 0.1f;
+    float D_LIM = 0.12f;
 
     float last_error = 0.0;
     float last_iterm = 0.0;
@@ -33,9 +35,9 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.0008, 1e-4, 3e-7);
-    PID x_rate_pid = PID(0.0009, 1e-4, 3e-7);
-    PID z_rate_pid = PID(0.003, 1.2e-4, 0);
+    PID y_rate_pid = PID(0.0008f, 1e-4f, 3e-7f, 0.1f, 0.12f);
+    PID x_rate_pid = PID(0.0009f, 1e-4f, 3e-7f, 0.1f, 0.12f);
+    PID z_rate_pid = PID(0.003f, 1.2e-4f, 0.0f, 0.1f, 0.12f);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
     void reset();
@@ -75,17 +77,17 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(15.0f, 8e-5f, 0.0f);
-    PID vy_pid_l1 = PID(15.0f, 8e-5f, 0.0f);
+    PID vx_pid_l1 = PID(18.0f, 5e-4f, 0.0f, 2.0f, 0.12f);
+    PID vy_pid_l1 = PID(18.0f, 5e-4f, 0.0f, 2.0f, 0.12f);
 
-    PID vx_pid_l2 = PID(25.0f, 6e-6f, 0.0f);
-    PID vy_pid_l2 = PID(25.0f, 6e-6f, 0.0f);
+    PID vx_pid_l2 = PID(35.0f, 1e-4f, 0.0f, 2.0f, 0.12f);
+    PID vy_pid_l2 = PID(35.0f, 1e-4f, 0.0f, 2.0f, 0.12f);
 
 public:
     inline float deadband_x(float x)
     {
-        constexpr float DB_ENTER = 0.05f;
-        constexpr float DB_EXIT = 0.08f;
+        constexpr float DB_ENTER = 0.01f;
+        constexpr float DB_EXIT = 0.04f;
 
         static bool in_deadband = true;
 
@@ -107,8 +109,8 @@ public:
 
     inline float deadband_y(float y)
     {
-        constexpr float DB_ENTER = 0.05f;
-        constexpr float DB_EXIT = 0.08f;
+        constexpr float DB_ENTER = 0.01f;
+        constexpr float DB_EXIT = 0.04f;
 
         static bool in_deadband = true;
 
@@ -160,7 +162,7 @@ public:
     {
         constexpr float VEL_DEADBAND = 0.06f;
         constexpr float SWITCH_VEL = 0.20f;
-        constexpr float MAX_ANGLE = 20.0f;
+        constexpr float MAX_ANGLE = 15.0f;
         constexpr float MAX_SLEW_DPS = 60.0f;
 
         static float last_pitch = 0.0f;

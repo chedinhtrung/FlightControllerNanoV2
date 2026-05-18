@@ -2,10 +2,12 @@
 #include "config.h"
 #include "mathutils.h"
 
-PID::PID(float p_term, float i_term, float d_term) {
+PID::PID(float p_term, float i_term, float d_term, float integral_limit, float derivative_limit) {
     P = p_term;
     I = i_term;
     D = d_term;
+    I_LIM = fabsf(integral_limit);
+    D_LIM = fabsf(derivative_limit);
 }
 
 float PID::calculate(float new_error) {
@@ -14,20 +16,11 @@ float PID::calculate(float new_error) {
     // Trapezoidal integration
     last_iterm += I * 0.5 * (new_error + last_error) * DT;
 
-    if (last_iterm > 0.1) {
-        last_iterm = 0.1;
-    } else if (last_iterm < -0.1) {
-        last_iterm = -0.1;
-    }
+    last_iterm = constrain(last_iterm, -I_LIM, I_LIM);
 
     const float dterm_raw = D * (new_error - last_error) / DT;
-    float dterm = dterm_raw;
 
-    if (dterm > 0.12) {
-        dterm = 0.12;
-    } else if (dterm < -0.12) {
-        dterm = -0.12;
-    }
+    float dterm = constrain(dterm_raw, -D_LIM, D_LIM);
 
     last_error = new_error;
 

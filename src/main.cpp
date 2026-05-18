@@ -126,10 +126,6 @@ void loop()
       rd.C4 * 0.025f,
       rd.C1};
 
-  // calculate errors
-
-  Vec3 v_est = vel_kf.velocity();
-
   bool airborne =
       rd.C3 > 0.2f &&
       mtf02_data.dist_status == 1 &&
