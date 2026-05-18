@@ -34,7 +34,6 @@ class AttiStabilizer
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
     PID y_rate_pid = PID(0.0008, 1e-4, 3e-7);
-    ;
     PID x_rate_pid = PID(0.0009, 1e-4, 3.5e-7);
     PID z_rate_pid = PID(0.003, 1.2e-4, 0);
 
@@ -63,6 +62,21 @@ public:
 
     constexpr float MAX_RATE_DPS = 120.0f;
     return constrain(rate, -MAX_RATE_DPS, MAX_RATE_DPS);
+    }
+};
+
+class VelStabilizer {
+
+    PID x_rate_pid = PID(5.0f, 0.0f, 0.0f);
+    PID y_rate_pid = PID(5.0f, 0.0f, 0.0f);
+
+    inline EulerAngle vel_error_to_angle_target(Vec3 v_error, float yawrate)
+    {
+        return EulerAngle {
+            yawrate,
+            -1.0f * x_rate_pid.calculate(v_error.x),
+            y_rate_pid.calculate(v_error.y)
+        };
     }
 };
 

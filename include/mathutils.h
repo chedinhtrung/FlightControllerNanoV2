@@ -71,6 +71,31 @@ inline EulerAngle quaternionToEuler(const Quaternion& q)
     return e;
 }
 
+inline Quaternion eulerToQuaternion(const EulerAngle& e)
+{
+    // Half angles
+    const float cy = cosf(e.yaw * 0.5f);
+    const float sy = sinf(e.yaw * 0.5f);
+
+    const float cp = cosf(e.pitch * 0.5f);
+    const float sp = sinf(e.pitch * 0.5f);
+
+    const float cr = cosf(e.roll * 0.5f);
+    const float sr = sinf(e.roll * 0.5f);
+
+    Quaternion q;
+
+    // ZYX intrinsic rotation:
+    // yaw(Z) -> pitch(Y) -> roll(X)
+
+    q.w = cr * cp * cy + sr * sp * sy;
+    q.x = sr * cp * cy - cr * sp * sy;
+    q.y = cr * sp * cy + sr * cp * sy;
+    q.z = cr * cp * sy - sr * sp * cy;
+
+    return q;
+}
+
 // Convert euler angle rate of change to body frame rate of change 
 inline Vec3 eulerRatesToBodyRates(const EulerAngle& attitude,
                               const EulerAngle& euler_rate)

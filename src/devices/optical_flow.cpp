@@ -13,7 +13,7 @@ bool OpticalFlow::setup()
         return false;
     }
 
-    gyro_lpf = Vec3LPF(0.05);
+    gyro_lpf = Vec3LPF(0.08);
     flow_lpf = Vec3LPF(0.8);
     return true;
 }
@@ -39,7 +39,7 @@ Vec3 OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const V
     constexpr float FLOW_RAD_PER_CENTIRAD= 0.01f;
     constexpr float FLOW_QUALITY_MIN = 20.0f;
     constexpr float FLOW_QUALITY_MAX = 255.0f;
-    constexpr float GYRO_MULTIPLIER_MAX = 3.0f;
+    constexpr float GYRO_MULTIPLIER_MAX = 3.6f;
 
     const float range_m = 0.001f * static_cast<float>(flowdata.dist_mm);
 
@@ -60,6 +60,7 @@ Vec3 OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const V
     compensated_flow = flow_lpf.update(compensated_flow);
     Vec3 filtered_gyro = gyro_lpf.update(gyro);
 
+    // gate compensation and multiplier according to quality
     float gyro_multiplier = 0.0f;
     if (flowdata.flow_quality >= FLOW_QUALITY_MIN)
     {
@@ -77,7 +78,6 @@ Vec3 OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const V
         compensated_flow.y + scaled_gyro.x,
         0.0f
     };
-    
 
     // Corrected COM velocity, expressed in body/sensor axes.
     Vec3 v_body = compensated_flow * range_m;
@@ -103,19 +103,6 @@ Vec3 OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const V
         cy * v_world.x + sy * v_world.y,
         -sy * v_world.x + cy * v_world.y,
         0.0f};
-    
-    const uint32_t now_ms = millis();
-    static uint32_t last_log_ms = 0;
-    if (now_ms - last_log_ms >= 10)
-    {
-        last_log_ms = now_ms;
-        Serial.print(">");
-        Serial.print("v_x:");
-        Serial.print(v_v1.x * 100, 6);
-        Serial.print(",");
-        Serial.print("v_y:");
-        Serial.println(v_v1.y * 100, 6);
-    }
 
     return v_v1;
 }

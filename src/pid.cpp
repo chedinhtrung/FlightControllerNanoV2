@@ -47,7 +47,7 @@ void PID::reset() {
     last_iterm = 0.0;
 }
 
-// Computes normalized adjust to motor from body orientation q, euler target, and gyro reading 
+// Computes normalized adjust to motor from body orientation q, euler target (deg), and gyro reading (rad) 
 // Euler target: roll and pitch are absolute angles, yaw is angle rate
 MotorAdjust AttiStabilizer::compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro){
 
