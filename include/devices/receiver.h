@@ -15,7 +15,8 @@ public:
 
     bool read(PPMCommand &cmd);
     bool read(RPICommand &cmd);
-    PPMCommand normalize(PPMCommand cmd) const;
+    PPMCommand to_anglemode(const PPMCommand& cmd) const;
+    PPMCommand to_vxy_mode(const PPMCommand& cmd) const;
     CMDType type() const;
 
 private:

@@ -13,27 +13,52 @@ bool Receiver::read(RPICommand &cmd) {
     return ppm_driver_.read(cmd);
 }
 
-PPMCommand Receiver::normalize(PPMCommand cmd) const {
+PPMCommand Receiver::to_anglemode(const PPMCommand& cmd) const {
+    // Convert controller input to desired angle in degrees
+    PPMCommand out;
+    out.C2 = (-cmd.C2 + 1500.0f) / 1000.0f * 70.0f;
+    out.C4 = (cmd.C4 - 1500.0f) / 1000.0f * 70.0f;
+    out.C1 = (cmd.C1 - 1500.0f) / 1000.0f * 70.0f;
+
+    out.C3 = (cmd.C3 - 1000.0f) / 1000.0f;
+
+    // Throttle in 0 -- 1
+    out.C3 = constrain(out.C3, 0.0f, 1.0f);
+
+    // Pitch (degrees)
+    out.C2 = constrain(out.C2, -35.0f, 35.0f);
+
+    // Roll (degrees)
+    out.C4 = constrain(out.C4, -35.0f, 35.0f);
+
+    // Yaw rate (degrees / s)
+    out.C1 = constrain(out.C1, -35.0f, 35.0f);
+
+    return out;
+}
+
+PPMCommand Receiver::to_vxy_mode(const PPMCommand& cmd) const {
     // Convert controller input to desired angle/rate
-    cmd.C2 = (-cmd.C2 + 1500.0f) / 1000.0f * 90.0f;
-    cmd.C4 = (cmd.C4 - 1500.0f) / 1000.0f * 90.0f;
-    cmd.C1 = (cmd.C1 - 1500.0f) / 1000.0f * 80.0f - 0.06f;
+    PPMCommand out;
+    out.C2 = (cmd.C2 - 1500.0f) / 1000.0f * 1.8;
+    out.C4 = (cmd.C4 - 1500.0f) / 1000.0f * 1.8;
+    out.C1 = (cmd.C1 - 1500.0f) / 1000.0f * 70;  // map 1000 - 2000 to range -35 -> 35
 
-    cmd.C3 = (cmd.C3 - 1000.0f) / 1000.0f;
+    out.C3 = (cmd.C3 - 1000.0f) / 1000.0f;
 
-    if (cmd.C3 > 1.0f) cmd.C3 = 1.0f;
-    else if (cmd.C3 < 0.0f) cmd.C3 = 0.0f;
+    // Throttle in 0 -- 1
+    out.C3 = constrain(out.C3, 0.0f, 1.0f);
 
-    if (cmd.C2 > 35.0f) cmd.C2 = 35.0f;
-    else if (cmd.C2 < -35.0f) cmd.C2 = -35.0f;
+    // vx
+    out.C2 = constrain(out.C2, -0.9f, 0.9f);
 
-    if (cmd.C4 > 35.0f) cmd.C4 = 35.0f;
-    else if (cmd.C4 < -35.0f) cmd.C4 = -35.0f;
+    // vy
+    out.C4 = constrain(out.C4, -0.9f, 0.9f);
 
-    if (cmd.C1 > 30.0f) cmd.C1 = 30.0f;
-    else if (cmd.C1 < -30.0f) cmd.C1 = -30.0f;
+    // Yaw rate (degrees / s)
+    out.C1 = constrain(out.C1, -35.0f, 35.0f);
 
-    return cmd;
+    return out;
 }
 
 CMDType Receiver::type() const {

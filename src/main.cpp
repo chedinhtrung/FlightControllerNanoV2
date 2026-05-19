@@ -119,25 +119,22 @@ void loop()
   {
     // Placeholder: optional receiver read error handling.
   }
-  PPMCommand rd = receiver.normalize(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
+  PPMCommand rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
+
+  PPMCommand vxy_cmd = receiver.to_vxy_mode(cmd_raw);
 
   Vec3 vel_target{
-      rd.C2 * -0.025f,
-      rd.C4 * 0.025f,
-      rd.C1};
+      vxy_cmd.C2,
+      vxy_cmd.C4,
+      vxy_cmd.C1
+  };
 
   bool airborne =
-      rd.C3 > 0.2f &&
+      rpy_cmd.C3 > 0.2f &&
       mtf02_data.dist_status == 1 &&
       mtf02_data.dist_mm > 30;
   
   EulerAngle angle_target_vel;
-
-  EulerAngle angle_target_stick {
-      rd.C2 * 0.5f,
-      rd.C4 * 0.5f,
-      rd.C1
-  };
 
   if (!airborne)
   {
@@ -150,10 +147,14 @@ void loop()
     angle_target_vel = vel_stabilizer.vel_error_to_angle_target(vel_target - v_est, vel_target.z);
   }
 
- 
+  EulerAngle angle_target_stick {
+      rpy_cmd.C2 * 0.5f,
+      rpy_cmd.C4 * 0.5f,
+      rpy_cmd.C1
+  };
 
   float authority = vel_stabilizer.velHoldAuthorityFromHeight(mtf02_data.dist_mm * 1e-3);
-  
+
   EulerAngle angle_target; 
   angle_target.yaw = angle_target_vel.yaw;
   angle_target.pitch = angle_target_vel.pitch * authority + angle_target_stick.pitch * (1 - authority);
@@ -165,9 +166,9 @@ void loop()
 
   // Output to motor, lock until throttle is not 0
 
-  if (rd.C3 > 0.01 && rd.C3 <= 1.0)
+  if (rpy_cmd.C3 > 0.01 && rpy_cmd.C3 <= 1.0)
   {
-    motor_device.write(rd.C3, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
+    motor_device.write(rpy_cmd.C3, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
   }
   else
   {
