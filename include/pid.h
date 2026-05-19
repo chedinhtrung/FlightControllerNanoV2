@@ -77,11 +77,11 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(18.0f, 5e-4f, 0.0f, 2.0f, 0.12f);
-    PID vy_pid_l1 = PID(18.0f, 5e-4f, 0.0f, 2.0f, 0.12f);
+    PID vx_pid_l1 = PID(30.0f,1.2e-3f, 0.0f, 2.0f, 0.12f);
+    PID vy_pid_l1 = PID(30.0f, 1.2e-3f, 0.0f, 2.0f, 0.12f);
 
-    PID vx_pid_l2 = PID(35.0f, 1e-4f, 0.0f, 2.0f, 0.12f);
-    PID vy_pid_l2 = PID(35.0f, 1e-4f, 0.0f, 2.0f, 0.12f);
+    PID vx_pid_l2 = PID(40.0f, 0.0f, 0.0f, 2.0f, 0.12f);
+    PID vy_pid_l2 = PID(40.0f, 0.0f, 0.0f, 2.0f, 0.12f);
 
 public:
     inline float deadband_x(float x)
@@ -173,7 +173,9 @@ public:
 
         // Blend factor: 0 = low-error PID, 1 = high-error PID
         float tx = constrain(fabsf(v_error.x) / SWITCH_VEL, 0.0f, 1.0f);
+        tx = tx * tx * (3 - 2*tx);
         float ty = constrain(fabsf(v_error.y) / SWITCH_VEL, 0.0f, 1.0f);
+        ty = ty * ty * (3 - 2*ty);
 
         float pitch_l1 = vx_pid_l1.calculate(v_error.x);
         float pitch_l2 = vx_pid_l2.calculate(v_error.x);
