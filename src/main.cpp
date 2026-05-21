@@ -106,7 +106,7 @@ void loop()
       mtf02_data.dist_status == 1 &&
       mtf02_data.flow_status == 1 &&
       mtf02_data.flow_quality >= 20 &&
-      mtf02_data.dist_mm > 8;
+      mtf02_data.dist_mm > 10;
 
   if (flow_ok)
   {
@@ -132,7 +132,7 @@ void loop()
   bool airborne =
       rpy_cmd.C3 > 0.2f &&
       mtf02_data.dist_status == 1 &&
-      mtf02_data.dist_mm > 30;
+      mtf02_data.dist_mm > 40;
   
   EulerAngle angle_target_vel;
 

@@ -61,11 +61,13 @@ void VelKF2::predict(const Vec3 &accel, const Quaternion &q)
 
     x[0] += accel_v1.x * dt;
     x[1] += accel_v1.y * dt;
+    x[2] += accel_v1.z * dt;
 
     const float Q = accel_sigma * accel_sigma * dt * dt;
 
     P[0] += Q;
     P[1] += Q;
+    P[2] += Q;
 }
 
 void VelKF2::updateFlow(const Vec3 &v_v1, const Vec3& gyro, float quality, float range_m)
@@ -128,7 +130,7 @@ void VelKF2::updateFlow(const Vec3 &v_v1, const Vec3& gyro, float quality, float
 
 Vec3 VelKF2::velocity() const
 {
-    return Vec3{x[0], x[1], 0.0f};
+    return Vec3{x[0], x[1], x[2]};
 }
 
 void VelKF2::update1D(float &xi, float &Pi, float zi, float Ri)

@@ -13,8 +13,8 @@ bool OpticalFlow::setup()
         return false;
     }
 
-    gyro_lpf = Vec3LPF(0.08);
-    flow_lpf = Vec3LPF(0.8);
+    gyro_lpf = Vec3LPF(0.05);
+    flow_lpf = Vec3LPF(0.5);
     return true;
 }
 

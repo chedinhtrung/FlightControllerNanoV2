@@ -6,23 +6,23 @@ struct VelKF2
 {
     // State:
     // x = [vx, vy]^T
-    float x[2];
+    float x[3];
 
     // Covariance:
     // P = 2x2, kept diagonal for two independent 1D filters.
-    float P[2];
+    float P[3];
 
     float accel_sigma; // process acceleration noise, m/s^2
     float flow_sigma;  // optical-flow velocity noise, m/s
 
     uint32_t last_update_us = micros();
 
-    VelKF2(float accel_sigma_ = 1.0f,
+    VelKF2(float accel_sigma_ = 0.9f,
            float flow_sigma_ = 0.15f,
-           float initial_P_ = 1.0f);
+           float initial_P_ = 0.0025f);
 
     void reset(const Vec3& v0 = Vec3{0.0f, 0.0f, 0.0f},
-               float initial_P_ = 1.0f);
+               float initial_P_ = 0.0025f);
 
     // Prediction:
     // x_k|k-1 = F x_k-1|k-1 + B a
