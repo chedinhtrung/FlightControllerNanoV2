@@ -158,7 +158,7 @@ public:
         return current + delta;
     }
 
-    inline EulerAngle vel_error_to_angle_target(Vec3 v_error, float yawrate)
+    inline EulerAngle vxy_error_to_angle_target(Vec3 v_error, float yawrate)
     {
         constexpr float VEL_DEADBAND = 0.06f;
         constexpr float SWITCH_VEL = 0.20f;
@@ -200,8 +200,12 @@ public:
             -pitch_target,
             roll_target};
     }
-
     void reset();
+};
+
+class VzStabilizer {
+    PID vy_pid_l2 = PID(35.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
+
 };
 
 #endif

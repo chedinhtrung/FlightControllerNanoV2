@@ -121,7 +121,7 @@ Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata
     q_norm = constrain(q_norm, 0.0f, 1.0f);
 
     // Low quality = low confidence = high sigma
-    float quality_scale = 1.0f / (0.4f + 0.6f * q_norm);
+    float quality_scale = 1.0f / (0.55f + 0.45 * q_norm);
 
     // gyro magnitude, rad/s
 
