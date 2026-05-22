@@ -5,6 +5,7 @@
 
 #include "drivers/ms5611.h"
 #include "interfaces.h"
+#include "lpf.h"
 
 constexpr uint32_t BARO_ALT_HZ = 30;
 constexpr uint32_t BARO_ALT_PERIOD_US = 1000000UL / BARO_ALT_HZ;
@@ -17,6 +18,7 @@ public:
     bool setup();
     void kick();
     bool read(BaroData &out);
+    void reset();
 
 private:
     bool calibrate();
@@ -24,9 +26,9 @@ private:
     BarometerDriver &driver_;
     uint32_t period_us_ = 0;
     uint32_t last_kick_us_ = 0;
-    float ground_pressure_pa_ = 101325.0f;
-    float filtered_altitude_m_ = 0.0f;
-    bool filter_initialized_ = false;
+    float sea_level_pressure_pa_ = 101325.0f;
+    float altitude_zero_m_ = 0.0f;
+    LPF altitude_lpf_{BARO_ALT_FILTER_ALPHA};
 };
 
 #endif

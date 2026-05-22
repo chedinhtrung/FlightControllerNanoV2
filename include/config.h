@@ -12,7 +12,7 @@ constexpr float DT = 1.0/LOOP_HZ;
 constexpr int LOG_RATE_HZ = 30;
 constexpr int PERIOD_LOG_US = 1000000UL / LOG_RATE_HZ;
 
-constexpr Vec3 R_G_TO_FLOW = {-0.054, -0.005, 0.002};  // optical flow to Center Of Gravity of the drone
+constexpr Vec3 R_G_TO_FLOW = {-0.054, -0.005, 0.002};  // drone COM to sensor 
 
 #define RAD_PER_DEG 0.0174533f
 #define DEG_PER_RAD 57.295779f

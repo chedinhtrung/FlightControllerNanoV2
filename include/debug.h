@@ -16,9 +16,11 @@ void log(const RawImuData &value, const char *label = "RawImuData");
 void log(const ImuData &value, const char *label = "ImuData");
 void log(const PPMCommand &value, const char *label = "PPMCommand");
 void log(const MTF02Data &value, const char *label = "MTF02");
+void log(float value, const char *label = "float");
 
 void plot(const Vec3 &value, const char *label = "vec");
 void plot(const EulerAngle &value, const char *label = "euler");
+void plot(float value, const char *label = "float");
 }
 
 #endif

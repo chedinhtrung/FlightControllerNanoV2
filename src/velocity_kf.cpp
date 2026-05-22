@@ -3,21 +3,28 @@
 
 VelKF2::VelKF2(float accel_sigma_,
                float flow_sigma_,
-               float initial_P_)
-    : x{0.0f, 0.0f},
-      P{initial_P_, initial_P_},
+               float initial_P_,
+               float v_range_sigma_,
+               float v_baro_sigma_)
+    : v{0.0f, 0.0f, 0.0f},
+      P{initial_P_, initial_P_, initial_P_},
       accel_sigma(accel_sigma_),
-      flow_sigma(flow_sigma_)
+      flow_sigma(flow_sigma_),
+      v_range_sigma(v_range_sigma_),
+      v_baro_sigma(v_baro_sigma_)
 {
 }
 
 void VelKF2::reset(const Vec3 &v0, float initial_P_)
 {
-    x[0] = v0.x;
-    x[1] = v0.y;
+    v[0] = v0.x;
+    v[1] = v0.y;
 
     P[0] = initial_P_;
     P[1] = initial_P_;
+
+    v[2] = v0.z;
+    P[2] = initial_P_;
 }
 
 void VelKF2::predict(const Vec3 &accel, const Quaternion &q)
@@ -51,17 +58,18 @@ void VelKF2::predict(const Vec3 &accel, const Quaternion &q)
     float dt = (uint32_t)(now - last_update_us) * 1e-6f;
     last_update_us = now;
 
-    // reject integration if dt is too stale 
+    // reject integration if dt is too stale
     if (dt <= 0.0f || dt > 0.05f)
     {
         P[0] += 0.05f;
         P[1] += 0.05f;
+        P[2] += 0.05f;
         return;
     }
 
-    x[0] += accel_v1.x * dt;
-    x[1] += accel_v1.y * dt;
-    x[2] += accel_v1.z * dt;
+    v[0] += accel_v1.x * dt;
+    v[1] += accel_v1.y * dt;
+    v[2] += accel_v1.z * dt;
 
     const float Q = accel_sigma * accel_sigma * dt * dt;
 
@@ -124,13 +132,13 @@ void VelKF2::updateFlow(const Vec3 &v_v1, const Vec3& gyro, float quality, float
     const float Rx = sigma_eff_x * sigma_eff_x;
     const float Ry = sigma_eff_y * sigma_eff_y;
 
-    update1D(x[0], P[0], v_v1.x, Rx);
-    update1D(x[1], P[1], v_v1.y, Ry);
+    update1D(v[0], P[0], v_v1.x, Rx);
+    update1D(v[1], P[1], v_v1.y, Ry);
 }
 
 Vec3 VelKF2::velocity() const
 {
-    return Vec3{x[0], x[1], x[2]};
+    return Vec3{v[0], v[1], v[2]};
 }
 
 void VelKF2::update1D(float &xi, float &Pi, float zi, float Ri)

@@ -28,17 +28,20 @@ bool Barometer::read(BaroData &out) {
         return false;
     }
 
-    const float raw_altitude_m = 44330.0f * (1.0f - powf(sample.pres_pa / ground_pressure_pa_, 0.19029495f));
-    if (!filter_initialized_) {
-        filtered_altitude_m_ = raw_altitude_m;
-        filter_initialized_ = true;
-    } else {
-        filtered_altitude_m_ += BARO_ALT_FILTER_ALPHA * (raw_altitude_m - filtered_altitude_m_);
-    }
+    const float raw_altitude_m = 44330.0f * (1.0f - powf(sample.pres_pa / sea_level_pressure_pa_, 0.19029495f));
+    const float filtered_altitude_m = altitude_lpf_.update(raw_altitude_m);
 
-    sample.altitude_m = filtered_altitude_m_;
+    sample.altitude_m = filtered_altitude_m - altitude_zero_m_;
     out = sample;
     return true;
+}
+
+void Barometer::reset() {
+    if (!altitude_lpf_.initialized()) {
+        altitude_zero_m_ = 0.0f;
+        return;
+    }
+    altitude_zero_m_ = altitude_lpf_.value();
 }
 
 bool Barometer::calibrate() {
@@ -61,8 +64,11 @@ bool Barometer::calibrate() {
         return false;
     }
 
-    ground_pressure_pa_ = sum_pressure / (float)valid;
-    filtered_altitude_m_ = 0.0f;
-    filter_initialized_ = false;
+    const float avg_pressure_pa = sum_pressure / (float)valid;
+    const float start_altitude_m =
+        44330.0f * (1.0f - powf(avg_pressure_pa / sea_level_pressure_pa_, 0.19029495f));
+
+    altitude_lpf_.reset(start_altitude_m);
+    altitude_zero_m_ = start_altitude_m;
     return true;
 }

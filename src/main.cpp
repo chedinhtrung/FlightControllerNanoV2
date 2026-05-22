@@ -38,7 +38,6 @@ OpticalFlow optical_flow(mtf02);
 MTF02Data mtf02_data;
 
 VelKF2 vel_kf = VelKF2();
-Vec3LPF vel_ctl_lpf = Vec3LPF(1.0f);
 
 AttiStabilizer atti_stabilizer = AttiStabilizer();
 VelStabilizer vel_stabilizer = VelStabilizer();
@@ -123,7 +122,7 @@ void loop()
 
   PPMCommand vxy_cmd = receiver.to_vxy_mode(cmd_raw);
 
-  Vec3 vel_target{
+  Vec3 command_target{
       vxy_cmd.C2,
       vxy_cmd.C4,
       vxy_cmd.C1
@@ -139,12 +138,12 @@ void loop()
   if (!airborne)
   {
     vel_kf.reset();
-    angle_target_vel = EulerAngle{vel_target.z, 0.0f, 0.0f}; // or hover trim only
+    angle_target_vel = EulerAngle{command_target.z, 0.0f, 0.0f}; // or hover trim only
   }
   else
   {
-    Vec3 v_est = vel_ctl_lpf.update(vel_kf.velocity());
-    angle_target_vel = vel_stabilizer.vel_error_to_angle_target(vel_target - v_est, vel_target.z);
+    Vec3 v_est = vel_kf.velocity();
+    angle_target_vel = vel_stabilizer.vel_error_to_angle_target(command_target - v_est, command_target.z);
   }
 
   EulerAngle angle_target_stick {
@@ -176,11 +175,14 @@ void loop()
     atti_stabilizer.reset();
     vel_stabilizer.reset();
     vel_kf.reset();
-    vel_ctl_lpf.reset();
   }
 
   barometer.kick();
-  barometer.read(baro_data);
+  if(barometer.read(baro_data)){
+    //vel_kf.updateBaro(baro_data.altitude_m, madgw.q);
+  }
+
+  debug::plot(vel_kf.velocity());
 
   while (micros() - last_active < PERIOD_US){}
 }

@@ -117,6 +117,17 @@ void debug::log(const MTF02Data &value, const char *label) {
     Serial.println(buf);
 }
 
+void debug::log(float value, const char *label) {
+    static unsigned long last_log_us = 0;
+    unsigned long now = micros();
+    if ((unsigned long)(now - last_log_us) < DEBUG_LOG_PERIOD_US) return;
+    last_log_us = now;
+
+    char buf[64];
+    sprintf(buf, "%s %.4f", label, value);
+    Serial.println(buf);
+}
+
 void debug::plot(const Vec3 &value, const char *label) {
     static unsigned long last_log_us = 0;
     unsigned long now = micros();
@@ -134,6 +145,17 @@ void debug::plot(const Vec3 &value, const char *label) {
         label,
         value.z
     );
+    Serial.println(buf);
+}
+
+void debug::plot(float value, const char *label) {
+    static unsigned long last_log_us = 0;
+    unsigned long now = micros();
+    if ((unsigned long)(now - last_log_us) < DEBUG_LOG_PERIOD_US) return;
+    last_log_us = now;
+
+    char buf[64];
+    sprintf(buf, ">%s:%.4f", label, value);
     Serial.println(buf);
 }
 

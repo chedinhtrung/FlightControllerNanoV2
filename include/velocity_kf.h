@@ -6,7 +6,7 @@ struct VelKF2
 {
     // State:
     // x = [vx, vy]^T
-    float x[3];
+    float v[3];
 
     // Covariance:
     // P = 2x2, kept diagonal for two independent 1D filters.
@@ -15,27 +15,32 @@ struct VelKF2
     float accel_sigma; // process acceleration noise, m/s^2
     float flow_sigma;  // optical-flow velocity noise, m/s
 
+    float v_range_sigma;    // ranger noise, m/s
+    float v_baro_sigma;     // baro velocity sigma, m/s
+
     uint32_t last_update_us = micros();
 
-    VelKF2(float accel_sigma_ = 0.9f,
+    VelKF2(float accel_sigma_ = 0.8f,
            float flow_sigma_ = 0.15f,
-           float initial_P_ = 0.0025f);
+           float initial_P_ = 0.0025f,
+           float v_range_sigma_ = 0.08,
+           float v_baro_sigma_ = 0.3);
 
-    void reset(const Vec3& v0 = Vec3{0.0f, 0.0f, 0.0f},
+    void reset(const Vec3 &v0 = Vec3{0.0f, 0.0f, 0.0f},
                float initial_P_ = 0.0025f);
 
     // Prediction:
     // x_k|k-1 = F x_k-1|k-1 + B a
     // P_k|k-1 = F P F^T + Q
-    void predict(const Vec3& accel, const Quaternion& q);
+    void predict(const Vec3 &accel, const Quaternion &q);
 
     // Measurement update:
     // z = H x + noise
     // Here z = [vx_flow, vy_flow]^T and H = I.
-    void updateFlow(const Vec3& flow_v1, const Vec3& gyro, float quality, float range_m);
+    void updateFlow(const Vec3 &flow_v1, const Vec3 &gyro, float quality, float range_m);
 
     Vec3 velocity() const;
 
 private:
-    static void update1D(float& xi, float& Pi, float zi, float Ri);
+    static void update1D(float &xi, float &Pi, float zi, float Ri);
 };

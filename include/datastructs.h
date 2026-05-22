@@ -75,6 +75,18 @@ struct Vec3
     }
 };
 
+struct Vec3WithTrust
+{
+    Vec3 value{};
+    Vec3 trust{};
+};
+
+struct FloatWithTrust
+{
+    float value = 0.0f;
+    float trust = 0.0f;
+};
+
 struct Quaternion
 {
     float x = 0.0;
