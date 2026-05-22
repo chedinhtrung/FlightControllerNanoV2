@@ -98,19 +98,16 @@ void loop()
   while (optical_flow.has_bytes() && (micros() - last_active) < (PERIOD_US - 1000))
   {
     optical_flow.kick();
-    optical_flow.read(mtf02_data);
   }
 
-  bool flow_ok =
-      mtf02_data.dist_status == 1 &&
-      mtf02_data.flow_status == 1 &&
-      mtf02_data.flow_quality >= 20 &&
-      mtf02_data.dist_mm > 10;
+  bool flow_new_data = optical_flow.read(mtf02_data);
 
-  if (flow_ok)
+  if (flow_new_data)
   {
-    Vec3 v_v1 = optical_flow.get_compensated_v1frame_vxy(mtf02_data, imu_data.gyro, madgw.q);
-    vel_kf.updateFlow(v_v1, imu_data.gyro, mtf02_data.flow_quality, mtf02_data.dist_mm * 0.001f);
+    Vec3WithTrust v_v1 = optical_flow.get_compensated_v1frame_vxy(mtf02_data, imu_data.gyro, madgw.q);
+    vel_kf.updateFlow(v_v1);
+    FloatWithTrust vz_range = optical_flow.get_compensated_vz(mtf02_data.dist_mm * 1e-3f, imu_data.accel, madgw.q);
+    vel_kf.updateRange(vz_range);
   }
 
   PPMCommand cmd_raw{};
@@ -130,7 +127,6 @@ void loop()
 
   bool airborne =
       rpy_cmd.C3 > 0.2f &&
-      mtf02_data.dist_status == 1 &&
       mtf02_data.dist_mm > 40;
   
   EulerAngle angle_target_vel;

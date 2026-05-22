@@ -77,16 +77,16 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(45.0f, 0.2e-3f, 0.0f, 0.5f, 0.0f);
-    PID vy_pid_l1 = PID(45.0f, 0.2e-3f, 0.0f, 0.5f, 0.0f);
+    PID vx_pid_l1 = PID(45.0f, 1.5e-3f, 0.0f, 1.0f, 0.0f);
+    PID vy_pid_l1 = PID(45.0f, 1.5e-3f, 0.0f, 1.0f, 0.0f);
 
-    PID vx_pid_l2 = PID(30.0f, 0.0f, 1e-4f, 0.0f, 1.5f);
-    PID vy_pid_l2 = PID(30.0f, 0.0f, 1e-4f, 0.0f, 1.5f);
+    PID vx_pid_l2 = PID(35.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
+    PID vy_pid_l2 = PID(35.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
 
 public:
     inline float deadband_x(float x)
     {
-        constexpr float DB_ENTER = 0.01f;
+        constexpr float DB_ENTER = 0.03f;
         constexpr float DB_EXIT = 0.03f;
 
         static bool in_deadband = true;
@@ -109,7 +109,7 @@ public:
 
     inline float deadband_y(float y)
     {
-        constexpr float DB_ENTER = 0.01f;
+        constexpr float DB_ENTER = 0.03f;
         constexpr float DB_EXIT = 0.03f;
 
         static bool in_deadband = true;

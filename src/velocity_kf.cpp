@@ -78,7 +78,7 @@ void VelKF2::predict(const Vec3 &accel, const Quaternion &q)
     P[2] += Q;
 }
 
-void VelKF2::updateFlow(const Vec3 &v_v1, const Vec3& gyro, float quality, float range_m)
+void VelKF2::updateFlow(const Vec3WithTrust& flow_v1)
 {
     // Measurement model:
     //
@@ -88,53 +88,31 @@ void VelKF2::updateFlow(const Vec3 &v_v1, const Vec3& gyro, float quality, float
     // H = I
     // R = sigma_flow^2 I
 
-    float q_norm = quality / 255.0f;
-    q_norm = constrain(q_norm, 0.0f, 1.0f);
-
-    // Low quality = low confidence = high sigma
-    float quality_scale = 1.0f / (0.15f + 0.85f * q_norm);
-
-    // gyro magnitude, rad/s
-
-    // More rotation -> less confidence.
-    // Tune GYRO_REF. At gyro_mag == GYRO_REF,
-    // sigma roughly doubles from this term.
-    constexpr float GYRO_REF = 1.0f; // rad/s
-    float gyro_scale_x = 1.0f + sqrt(gyro.x * gyro.x + gyro.z * gyro.z * 0.09) / GYRO_REF;
-    float gyro_scale_y = 1.0f + fabs(gyro.y) / GYRO_REF;
-
-     // Height-based trust reduction.
-    //
-    // Below 1.2m: full trust.
-    // From 1.2m to 2.7m: gradually trust less.
-    // Above 2.7m: very weak trust.
-    constexpr float FULL_TRUST_H = 1.2f;
-    constexpr float WEAK_TRUST_H = 2.7f;
-    constexpr float MAX_HEIGHT_SCALE = 4.0f;
-
-    float height_scale = 1.0f;
-
-    if (range_m > FULL_TRUST_H) {
-        float t = (range_m - FULL_TRUST_H) / (WEAK_TRUST_H - FULL_TRUST_H);
-        t = constrain(t, 0.0f, 1.0f);
-
-        // sigma grows smoothly from 1x to 4x.
-        height_scale = 1.0f + t * (MAX_HEIGHT_SCALE - 1.0f);
+    if (flow_v1.trust.x <= 0.0f || flow_v1.trust.y <= 0.0f)
+    {
+        return;
     }
-
-    float sigma_eff_x = flow_sigma * quality_scale * gyro_scale_y * height_scale;
-    float sigma_eff_y = flow_sigma * quality_scale * gyro_scale_x * height_scale;
-
-    // Optional hard cap so R does not explode numerically.
-    sigma_eff_x = constrain(sigma_eff_x, flow_sigma, 3.0f);
-    sigma_eff_y = constrain(sigma_eff_y, flow_sigma, 3.0f);
+    const float sigma_eff_x = constrain(flow_sigma / flow_v1.trust.x, flow_sigma, 3.0f);
+    const float sigma_eff_y = constrain(flow_sigma / flow_v1.trust.y, flow_sigma, 3.0f);
 
     const float Rx = sigma_eff_x * sigma_eff_x;
     const float Ry = sigma_eff_y * sigma_eff_y;
 
-    update1D(v[0], P[0], v_v1.x, Rx);
-    update1D(v[1], P[1], v_v1.y, Ry);
+    update1D(v[0], P[0], flow_v1.value.x, Rx);
+    update1D(v[1], P[1], flow_v1.value.y, Ry);
 }
+
+void VelKF2::updateRange(const FloatWithTrust &vz_range_down)
+    {
+        if (vz_range_down.trust <= 0.0f)
+        {
+            return;
+        }
+        const float sigma_eff = constrain(v_range_sigma / vz_range_down.trust, v_range_sigma, 3.0f);
+        const float R = sigma_eff * sigma_eff;
+        update1D(v[2], P[2], vz_range_down.value, R);
+    }
+
 
 Vec3 VelKF2::velocity() const
 {

@@ -20,8 +20,8 @@ struct VelKF2
 
     uint32_t last_update_us = micros();
 
-    VelKF2(float accel_sigma_ = 0.8f,
-           float flow_sigma_ = 0.15f,
+    VelKF2(float accel_sigma_ = 1.0f,
+           float flow_sigma_ = 0.16f,
            float initial_P_ = 0.0025f,
            float v_range_sigma_ = 0.08,
            float v_baro_sigma_ = 0.3);
@@ -37,7 +37,9 @@ struct VelKF2
     // Measurement update:
     // z = H x + noise
     // Here z = [vx_flow, vy_flow]^T and H = I.
-    void updateFlow(const Vec3 &flow_v1, const Vec3 &gyro, float quality, float range_m);
+    void updateFlow(const Vec3WithTrust &flow_v1);
+    void updateBaro(const FloatWithTrust &vz_baro);
+    void updateRange(const FloatWithTrust& vz_range_down);
 
     Vec3 velocity() const;
 
