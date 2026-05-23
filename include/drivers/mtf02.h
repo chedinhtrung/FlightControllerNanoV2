@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include "interfaces.h"
 
-struct MTF02Data {
+struct MTF02Payload {
     uint32_t time_ms = 0;
     uint32_t dist_mm = 0;
     uint8_t strength = 0;
@@ -16,6 +16,11 @@ struct MTF02Data {
     uint8_t flow_status = 0;
 };
 
+struct MTF02Data{
+    MTF02Payload data; 
+    uint32_t timestamp;
+};
+
 class MTF02 : public OpticalFlowDriver {
 public:
     explicit MTF02(HardwareSerial &serial);
@@ -23,7 +28,7 @@ public:
     bool setup() override;
     bool parse() override;
     bool has_bytes() const override;
-    bool read(MTF02Data &out) override;
+    bool read(MTF02Payload &out) override;
 
 private:
     static constexpr uint8_t kHead = 0xEF;
@@ -32,7 +37,7 @@ private:
 
     HardwareSerial &serial_;
     uint32_t baud_ = 115200;
-    MTF02Data flow_data_{};
+    MTF02Payload flow_data_{};
     bool has_new_sample_ = false;
 
     uint8_t status_ = 0;

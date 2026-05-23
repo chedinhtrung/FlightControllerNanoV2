@@ -30,7 +30,13 @@ bool OpticalFlow::has_bytes() const
 
 bool OpticalFlow::read(MTF02Data &out)
 {
-    return driver_.read(out);
+    MTF02Payload data;
+    if (driver_.read(data)){
+        out.data = data; 
+        out.timestamp = micros();
+        return true;
+    }
+    return false;
 }
 
 Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const Vec3 gyro, const Quaternion &q)
@@ -41,12 +47,12 @@ Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata
     constexpr float FLOW_QUALITY_MAX = 255.0f;
     constexpr float GYRO_MULTIPLIER_MAX = 3.6f;
 
-    const float range_m = 0.001f * static_cast<float>(flowdata.dist_mm);
+    const float range_m = 0.001f * static_cast<float>(flowdata.data.dist_mm);
 
     bool flow_ok =
-        flowdata.dist_status == 1 &&
-        flowdata.flow_status == 1 &&
-        flowdata.flow_quality >= 20;
+        flowdata.data.dist_status == 1 &&
+        flowdata.data.flow_status == 1 &&
+        flowdata.data.flow_quality >= 20;
 
     if (!flow_ok)
     {
@@ -54,16 +60,16 @@ Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata
     }
 
     if (range_m < 0.004f || range_m > 5.0f ||
-        flowdata.flow_status != 1 ||
-        flowdata.dist_status != 1)
+        flowdata.data.flow_status != 1 ||
+        flowdata.data.dist_status != 1)
     {
         return Vec3WithTrust{Vec3{}, Vec3{}};
     }
 
     // Optical flow in sensor angular rate units (rad/s).
     Vec3 compensated_flow{
-        static_cast<float>(flowdata.flow_x) * FLOW_RAD_PER_CENTIRAD,
-        static_cast<float>(flowdata.flow_y) * FLOW_RAD_PER_CENTIRAD,
+        static_cast<float>(flowdata.data.flow_x) * FLOW_RAD_PER_CENTIRAD,
+        static_cast<float>(flowdata.data.flow_y) * FLOW_RAD_PER_CENTIRAD,
         0.0f};
 
     compensated_flow = flow_lpf.update(compensated_flow);
@@ -71,7 +77,7 @@ Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata
 
     // gate compensation and multiplier according to quality
     float gyro_multiplier = 0.0f;
-    if (flowdata.flow_quality >= FLOW_QUALITY_MIN)
+    if (flowdata.data.flow_quality >= FLOW_QUALITY_MIN)
     {
         /*
         const float q_norm = (static_cast<float>(flowdata.flow_quality) - FLOW_QUALITY_MIN) /
@@ -117,7 +123,7 @@ Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata
 
     // compute trust multiplier
 
-    float q_norm = flowdata.flow_quality / 255.0f;
+    float q_norm = flowdata.data.flow_quality / 255.0f;
     q_norm = constrain(q_norm, 0.0f, 1.0f);
 
     // Low quality = low confidence = high sigma

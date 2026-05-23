@@ -104,15 +104,15 @@ void debug::log(const MTF02Data &value, const char *label) {
         buf,
         "%s t_ms=%lu dist_mm=%lu strength=%u precision=%u dstat=%u flow_x=%d flow_y=%d flow_q=%u flow_s=%u",
         label,
-        (unsigned long)value.time_ms,
-        (unsigned long)value.dist_mm,
-        (unsigned int)value.strength,
-        (unsigned int)value.precision,
-        (unsigned int)value.dist_status,
-        (int)value.flow_x,
-        (int)value.flow_y,
-        (unsigned int)value.flow_quality,
-        (unsigned int)value.flow_status
+        (unsigned long)value.data.time_ms,
+        (unsigned long)value.data.dist_mm,
+        (unsigned int)value.data.strength,
+        (unsigned int)value.data.precision,
+        (unsigned int)value.data.dist_status,
+        (int)value.data.flow_x,
+        (int)value.data.flow_y,
+        (unsigned int)value.data.flow_quality,
+        (unsigned int)value.data.flow_status
     );
     Serial.println(buf);
 }

@@ -6,7 +6,7 @@ struct MotorCommand;
 struct PPMCommand;
 struct RPICommand;
 struct BaroData;
-struct MTF02Data;
+struct MTF02Payload;
 
 class ImuDriver {
 public:
@@ -46,7 +46,7 @@ public:
     virtual bool setup() = 0;
     virtual bool parse() = 0;
     virtual bool has_bytes() const = 0;
-    virtual bool read(MTF02Data &data) = 0;
+    virtual bool read(MTF02Payload &data) = 0;
     virtual bool write() { return false; }
 };
 

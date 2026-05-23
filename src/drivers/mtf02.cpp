@@ -21,7 +21,7 @@ bool MTF02::has_bytes() const {
     return serial_.available() > 0;
 }
 
-bool MTF02::read(MTF02Data &out) {
+bool MTF02::read(MTF02Payload &out) {
     if (!has_new_sample_) {
         return false;
     }
@@ -88,12 +88,12 @@ bool MTF02::parse_char(uint8_t byte_in) {
 }
 
 bool MTF02::decode_current_frame() {
-    if (msg_id_ != kRangeMsgId || len_ < sizeof(MTF02Data)) {
+    if (msg_id_ != kRangeMsgId || len_ < sizeof(MTF02Payload)) {
         return false;
     }
 
     // Layout matches the first bytes of the incoming payload exactly.
-    memcpy(&flow_data_, payload_, sizeof(MTF02Data));
+    memcpy(&flow_data_, payload_, sizeof(MTF02Payload));
     has_new_sample_ = true;
     return true;
 }

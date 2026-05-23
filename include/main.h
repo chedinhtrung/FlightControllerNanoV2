@@ -81,7 +81,7 @@ inline void update_optical_flow(int time_buffer_us)
     {
         Vec3WithTrust v_v1 = optical_flow.get_compensated_v1frame_vxy(mtf02_data, imu_data.gyro, madgw.q);
         vel_kf.updateFlow(Vec3WithTrust{vel_ctl_lpf.update(v_v1.value), v_v1.trust});
-        FloatWithTrust vz_range = optical_flow.get_compensated_vz(mtf02_data.dist_mm * 1e-3f, imu_data.accel, madgw.q);
+        FloatWithTrust vz_range = optical_flow.get_compensated_vz(mtf02_data.data.dist_mm * 1e-3f, imu_data.accel, madgw.q);
         vel_kf.updateRange(vz_range);
     }
 }
@@ -115,7 +115,7 @@ inline EulerAngle compute_angle_target_from_cmd(const PPMCommand &rpy_cmd, const
         rpy_cmd.C2 * 0.5f,
         rpy_cmd.C4};
 
-    float authority = vel_stabilizer.velHoldAuthorityFromHeight(mtf02_data.dist_mm * 1e-3);
+    float authority = vel_stabilizer.velHoldAuthorityFromHeight(mtf02_data.data.dist_mm * 1e-3);
 
     EulerAngle angle_target;
     angle_target.yaw = angle_target_vel.yaw;

@@ -96,7 +96,7 @@ void loop()
 
   bool airborne =
       rpy_cmd.C3 > 0.2f &&
-      mtf02_data.dist_mm > 40;
+      mtf02_data.data.dist_mm > 40;
 
   EulerAngle angle_target;
 
