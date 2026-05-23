@@ -8,6 +8,7 @@ struct BaroData {
     float temp_c = 0.0f;
     float pres_pa = 0.0f;
     float altitude_m = 0.0f;
+    uint32_t timestamp;
 };
 
 class MS5611 : public BarometerDriver {
