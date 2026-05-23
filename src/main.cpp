@@ -83,6 +83,7 @@ void loop()
   vel_kf.predict(imu_data.accel, madgw.q);
 
   update_optical_flow(1000);
+  //update_baro();
 
   PPMCommand cmd_raw{};
   if (!receiver.read(cmd_raw))
@@ -112,8 +113,6 @@ void loop()
         rpy_cmd.C4 * 0.5f};
   }
 
-  // debug::plot(angle_target);
-
   MotorAdjust m_adjust = atti_stabilizer.compute_rpy_adjust(madgw.q, angle_target, imu_data.gyro);
 
   // Output to motor, lock until throttle is not 0
@@ -130,12 +129,7 @@ void loop()
     reset_flight_controllers();
   }
 
-  barometer.kick();
-  if (barometer.read(baro_data))
-  {
-    // vel_kf.updateBaro(baro_data.altitude_m, madgw.q);
-  }
-
+  //debug::plot(vel_kf.velocity());
   while (micros() - last_active < PERIOD_US)
   {
   }

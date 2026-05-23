@@ -7,9 +7,9 @@
 #include "interfaces.h"
 #include "lpf.h"
 
-constexpr uint32_t BARO_ALT_HZ = 30;
+constexpr uint32_t BARO_ALT_HZ = 60;
 constexpr uint32_t BARO_ALT_PERIOD_US = 1000000UL / BARO_ALT_HZ;
-constexpr float BARO_ALT_FILTER_ALPHA = 0.05f;
+constexpr float BARO_ALT_FILTER_ALPHA = 0.3f;
 
 class Barometer {
 public:
@@ -19,6 +19,7 @@ public:
     void kick();
     bool read(BaroData &out);
     void reset();
+    FloatWithTrust get_vz_baro(float alt_m);
 
 private:
     bool calibrate();
@@ -29,6 +30,13 @@ private:
     float sea_level_pressure_pa_ = 101325.0f;
     float altitude_zero_m_ = 0.0f;
     LPF altitude_lpf_{BARO_ALT_FILTER_ALPHA};
+
+    uint32_t last_vz_update_us;
+
+    float last_alt_m = 0.0f;
+
+    bool vz_initialized_ = false;
+    
 };
 
 #endif

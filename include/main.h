@@ -68,6 +68,7 @@ inline void reset_flight_controllers()
 
 inline void update_optical_flow(int time_buffer_us)
 {
+    // update state and KF with optical flow's velocity and range
     // Low priority parse window: consume bytes while data is pending and loop time remains.
     while (optical_flow.has_bytes() && (micros() - last_active) < (PERIOD_US - time_buffer_us))
     {
@@ -83,6 +84,17 @@ inline void update_optical_flow(int time_buffer_us)
         FloatWithTrust vz_range = optical_flow.get_compensated_vz(mtf02_data.dist_mm * 1e-3f, imu_data.accel, madgw.q);
         vel_kf.updateRange(vz_range);
     }
+}
+
+inline void update_baro(){
+  barometer.kick();
+  if (barometer.read(baro_data))
+  {
+    //debug::plot(baro_data.altitude_m);
+    FloatWithTrust baro_vel = barometer.get_vz_baro(baro_data.altitude_m);
+    //debug::plot(baro_vel.value);
+    //el_kf.updateBaro(baro_vel);
+  }
 }
 
 inline EulerAngle compute_angle_target_from_cmd(const PPMCommand &rpy_cmd, const PPMCommand& vxy_cmd)

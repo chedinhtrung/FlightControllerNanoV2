@@ -165,27 +165,34 @@ Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata
     return Vec3WithTrust{v_v1, trust};
 }
 
-FloatWithTrust OpticalFlow::get_compensated_vz(float range_m, const Vec3 &accel, const Quaternion &q)
-{
+FloatWithTrust OpticalFlow::get_compensated_vz(
+    float range_m,
+    const Vec3& accel,
+    const Quaternion& q
+) {
     constexpr float MIN_RANGE_M = 0.03f;
     constexpr float MAX_RANGE_M = 3.0f;
-    constexpr float MIN_COS_TILT = 0.86f; // reject above ~30 deg tilt
-    constexpr float MAX_DH_M = 0.30f;     // table edge / bad jump reject
-    constexpr float MAX_VZ_MPS = 5.0f;    // reject insane range-rate
+    constexpr float MIN_COS_TILT = 0.86f;
+    constexpr float MAX_DH_M = 0.30f;
+    constexpr float MAX_VZ_MPS = 5.0f;
     constexpr float MAX_DT_S = 0.20f;
 
-    if (range_m < MIN_RANGE_M || range_m > MAX_RANGE_M)
-    {
+    if (range_m < MIN_RANGE_M || range_m > MAX_RANGE_M) {
         return FloatWithTrust{0.0f, 0.0f};
     }
 
     const Vec3 sensor_down_body{0.0f, 0.0f, 1.0f};
     const Vec3 world_down{0.0f, 0.0f, 1.0f};
+
     const Vec3 sensor_down_world = q * sensor_down_body * q.T();
 
-    const float cos_tilt = constrain(dot(sensor_down_world, world_down), -1.0f, 1.0f);
-    if (cos_tilt < MIN_COS_TILT)
-    {
+    const float cos_tilt = constrain(
+        dot(sensor_down_world, world_down),
+        -1.0f,
+        1.0f
+    );
+
+    if (cos_tilt < MIN_COS_TILT) {
         return FloatWithTrust{0.0f, 0.0f};
     }
 
@@ -193,27 +200,25 @@ FloatWithTrust OpticalFlow::get_compensated_vz(float range_m, const Vec3 &accel,
 
     const Vec3 r_g_to_flow_world = q * R_G_TO_FLOW * q.T();
 
-    // COM height above ground.
-    //
-    // If sensor is below COM, r_g_to_flow_world.z > 0,
-    // so COM is higher above ground than the sensor.
+    // AGL height of COM. Increases when drone climbs.
     const float height_com_m = height_sensor_m + r_g_to_flow_world.z;
 
     const uint32_t now = micros();
 
-    if (!range_vz_initialized_)
-    {
+    if (!range_vz_initialized_) {
         range_vz_initialized_ = true;
         last_height_m_ = height_com_m;
         last_range_update_us_ = now;
-        return FloatWithTrust{height_com_m, 0.5f};
+        last_range_vz = 0.0f;
+        return FloatWithTrust{0.0f, 0.0f};
     }
 
     const float dt = (uint32_t)(now - last_range_update_us_) * 1e-6f;
-    if (dt <= 0.0f || dt > MAX_DT_S)
-    {
+
+    if (dt <= 0.0f || dt > MAX_DT_S) {
         last_height_m_ = height_com_m;
         last_range_update_us_ = now;
+        last_range_vz = 0.0f;
         return FloatWithTrust{0.0f, 0.0f};
     }
 
@@ -221,14 +226,27 @@ FloatWithTrust OpticalFlow::get_compensated_vz(float range_m, const Vec3 &accel,
     const float vz_down = -dh / dt;
     const float range_accel_down = (vz_down - last_range_vz) / dt;
 
+    // Update baseline after derivative is computed.
     last_height_m_ = height_com_m;
     last_range_update_us_ = now;
 
-    // Reject impossible acceleration and "table jumps"
-    if (fabsf(dh) > MAX_DH_M || fabsf(vz_down) > MAX_VZ_MPS || range_accel_down * range_accel_down > 1.2 * dot(accel, accel))
-    {
+    if (fabsf(dh) > MAX_DH_M || fabsf(vz_down) > MAX_VZ_MPS) {
+        last_range_vz = vz_down;
+        return FloatWithTrust{0.0f, 0.0f};
+    }
+    
+    const float accel_mag_mps2 = 9.81f * sqrtf(dot(accel, accel));
+
+    // Range acceleration is noisy, so allow a generous margin.
+    constexpr float ACCEL_GATE_MULT = 3.0f;
+    constexpr float ACCEL_GATE_BIAS = 3.0f; // m/s^2 extra slack
+
+    if (fabsf(range_accel_down) >
+        ACCEL_GATE_MULT * accel_mag_mps2 + ACCEL_GATE_BIAS) {
+        last_range_vz = vz_down;
         return FloatWithTrust{0.0f, 0.0f};
     }
 
+    last_range_vz = vz_down;
     return FloatWithTrust{vz_down, 1.0f};
 }

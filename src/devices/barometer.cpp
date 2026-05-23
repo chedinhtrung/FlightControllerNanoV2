@@ -1,4 +1,5 @@
 #include "devices/barometer.h"
+#include "debug.h"
 
 #include <math.h>
 
@@ -52,6 +53,8 @@ bool Barometer::calibrate() {
 
     while (valid < kSamples) {
         driver_.kick();
+
+        delay(20);
         if (!driver_.read(sample)) {
             continue;
         }
@@ -71,4 +74,46 @@ bool Barometer::calibrate() {
     altitude_lpf_.reset(start_altitude_m);
     altitude_zero_m_ = start_altitude_m;
     return true;
+}
+
+FloatWithTrust Barometer::get_vz_baro(float alt_m)
+{
+
+    constexpr float MAX_DZ_M = 0.30f;
+    constexpr float MAX_VZ_MPS = 4.0f;
+    constexpr float MAX_DT_S = 0.50f;
+    constexpr float MIN_DT_S = 0.005f;
+
+    const uint32_t now = micros();
+
+    if (!vz_initialized_) {
+        vz_initialized_ = true;
+        last_alt_m = alt_m;
+        last_vz_update_us = now;
+        return FloatWithTrust{0.0f, 0.0f};
+    }
+
+    const float dt = (uint32_t)(now - last_vz_update_us) * 1e-6f;
+
+    if (dt < MIN_DT_S || dt > MAX_DT_S) {
+        last_alt_m = alt_m;
+        last_vz_update_us = now;
+        return FloatWithTrust{0.0f, 0.0f};
+    }
+
+    const float dz = alt_m - last_alt_m;
+
+    // alt_m positive upward, but KF vz is positive downward
+    const float vz = -dz / dt;
+
+    last_alt_m = alt_m;
+    last_vz_update_us = now;
+
+    debug::plot(vz);
+
+    if (fabsf(dz) > MAX_DZ_M || fabsf(vz) > MAX_VZ_MPS) {
+        return FloatWithTrust{0.0f, 0.0f};
+    }
+
+    return FloatWithTrust{vz, 1.0f};
 }

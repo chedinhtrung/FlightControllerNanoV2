@@ -103,16 +103,26 @@ void VelKF2::updateFlow(const Vec3WithTrust& flow_v1)
 }
 
 void VelKF2::updateRange(const FloatWithTrust &vz_range_down)
+{
+    if (vz_range_down.trust <= 0.0f)
     {
-        if (vz_range_down.trust <= 0.0f)
-        {
-            return;
-        }
-        const float sigma_eff = constrain(v_range_sigma / vz_range_down.trust, v_range_sigma, 3.0f);
-        const float R = sigma_eff * sigma_eff;
-        update1D(v[2], P[2], vz_range_down.value, R);
+        return;
     }
+    const float sigma_eff = constrain(v_range_sigma / vz_range_down.trust, v_range_sigma, 3.0f);
+    const float R = sigma_eff * sigma_eff;
+    update1D(v[2], P[2], vz_range_down.value, R);
+}
 
+void VelKF2::updateBaro(const FloatWithTrust &vz_baro)
+{
+    if (vz_baro.trust <= 0.0f)
+    {
+        return;
+    }
+    const float sigma_eff = constrain(v_baro_sigma / vz_baro.trust, v_range_sigma, 3.0f);
+    const float R = sigma_eff * sigma_eff;
+    update1D(v[2], P[2], vz_baro.value, R);
+}
 
 Vec3 VelKF2::velocity() const
 {
@@ -131,12 +141,16 @@ void VelKF2::update1D(float &xi, float &Pi, float zi, float Ri)
     // H = 1
     const float S = Pi + Ri;
 
-    if (S <= 1e-9f) {return;}
+    if (S <= 1e-9f)
+    {
+        return;
+    }
 
     // Innovation gate: reject measurement if too surprising.
     // 3-sigma gate.
     const float gate = 3.0f * sqrtf(S);
-    if (fabsf(y) > gate) {
+    if (fabsf(y) > gate)
+    {
         // Optional: increase covariance slightly so filter can recover.
         Pi += 0.02f;
         return;
