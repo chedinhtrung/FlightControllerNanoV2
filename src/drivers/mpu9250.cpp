@@ -86,10 +86,10 @@ bool MPU9250::setup(){
     // Enable all accel/gyro axes.
     writeRegister(REG_PWR_MGMT_2, 0x00);
 
-    // Gyro DLPF_CFG = 1 (~184 Hz BW, 1 kHz internal sample rate).
+    // Gyro DLPF_CFG = 0 (~184 Hz BW, 1 kHz internal sample rate).
     writeRegister(REG_CONFIG, 0x00);
 
-    // Sample rate = internal_rate/(1+SMPLRT_DIV) = 1kHz/(1+2) = 333 Hz
+    // Sample rate = internal_rate/(1+SMPLRT_DIV) = 1kHz/(1+1) = 500 Hz
     writeRegister(REG_SMPLRT_DIV, 0x01);
 
     // GYRO_FS_SEL = 0 => +-250 dps (131 LSB/dps).
@@ -140,6 +140,7 @@ bool MPU9250::read(ImuData &data) {
     if (!readBurstRaw(raw.accel, raw.gyro)) {
         return false;
     }
+    data.timestamp = micros();
 
     Vec3 gyro_base = {
         raw.gyro.x * GYRO_DPS_PER_LSB,
@@ -174,5 +175,7 @@ bool MPU9250::read(ImuData &data) {
 
     data.accel -= accel_bias_g;
     data.accel *= accel_scale;
+
+    
     return true;
 }

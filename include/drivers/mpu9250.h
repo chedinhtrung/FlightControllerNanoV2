@@ -28,14 +28,13 @@ struct ImuData
 {
     Vec3 gyro;
     Vec3 accel;
+    uint32_t timestamp;
 };
 
 class MPU9250 : public ImuDriver
 {
-public:
-    // Raw values for data gathering
     RawImuData raw;
-
+    // Accel calibration params 
     Vec3 accel_bias_g = {
         -0.065f, // x
         0.120f,  // y
@@ -46,8 +45,11 @@ public:
         1.000000f, // y
         0.995025f  // z
     };
-    Vec3 gyro_bias;
 
+    // gyro bias param, measured at rest on startup
+    Vec3 gyro_bias;
+public:
+    // Raw values for data gathering
         bool setup() override;
         void calibrate();
         bool read(ImuData &data) override;
