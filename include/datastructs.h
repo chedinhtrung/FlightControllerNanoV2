@@ -92,7 +92,7 @@ struct Quaternion
     float x = 0.0;
     float y = 0.0;
     float z = 0.0;
-    float w = 0.0;
+    float w = 1.0;
 
     inline Quaternion() = default;
 

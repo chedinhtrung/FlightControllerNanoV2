@@ -1,5 +1,6 @@
 #ifndef MATHUTILS
 #define MATHUTILS
+#include "BasicLinearAlgebra.h"
 #include "datastructs.h"
 #include <math.h>
 #include "config.h"
@@ -123,6 +124,68 @@ inline Vec3 eulerRatesToBodyRates(const EulerAngle& attitude,
                  + yaw_dot * cphi * ctheta;
 
     return omega_body;
+}
+
+inline BLA::Matrix<3, 3> skewSymmetric(const Vec3 &v)
+{
+    return {
+        0.0f, -v.z,  v.y,
+         v.z, 0.0f, -v.x,
+        -v.y,  v.x, 0.0f
+    };
+}
+
+inline BLA::Matrix<3, 3> exp(const Vec3 &u)
+{
+    // According to p.18 eq (77) Joan Sola
+    // Convert a rotation vector into a rotation matrix with exponential map
+    const float theta2 = dot(u, u);
+    const float theta = sqrtf(theta2);
+    const BLA::Matrix<3, 3> I = {
+        1.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 1.0f
+    };
+
+    if (theta < 1e-6f)
+    {
+        // First-order approximation near zero to avoid numerical instability.
+        return I + skewSymmetric(u);
+    }
+
+    const BLA::Matrix<3, 3> K = skewSymmetric(u);
+    const float a = sinf(theta) / theta;
+    const float b = (1.0f - cosf(theta)) / theta2;
+    return I + (a * K) + (b * (K * K));
+}
+
+inline Quaternion qexp(const Vec3 &u)
+{
+    // According to Joan Sola p.22 eq. (101)
+    // Convert a rotation vector to a corresponding rotation quaternion
+    const float theta2 = dot(u, u);
+    const float theta = sqrtf(theta2);
+
+    if (theta < 1e-6f)
+    {
+        // For tiny angles: sin(theta/2)/theta ~= 1/2, cos(theta/2) ~= 1.
+        return normalize(Quaternion{
+            0.5f * u.x,
+            0.5f * u.y,
+            0.5f * u.z,
+            1.0f
+        });
+    }
+
+    const float half_theta = 0.5f * theta;
+    const float s_over_theta = sinf(half_theta) / theta;
+
+    return Quaternion{
+        s_over_theta * u.x,
+        s_over_theta * u.y,
+        s_over_theta * u.z,
+        cosf(half_theta)
+    };
 }
 
 inline float blend(float a, float b, float t)
