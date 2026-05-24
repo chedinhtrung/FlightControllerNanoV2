@@ -128,6 +128,25 @@ void debug::log(float value, const char *label) {
     Serial.println(buf);
 }
 
+void debug::log(const BLA::Matrix<3, 3> &value, const char *label) {
+    static unsigned long last_log_us = 0;
+    unsigned long now = micros();
+    if ((unsigned long)(now - last_log_us) < DEBUG_LOG_PERIOD_US) return;
+    last_log_us = now;
+
+    char header[64];
+    sprintf(header, "%s", label);
+    Serial.println(header);
+
+    char row[128];
+    sprintf(row, "  [%.4f %.4f %.4f]", value(0, 0), value(0, 1), value(0, 2));
+    Serial.println(row);
+    sprintf(row, "  [%.4f %.4f %.4f]", value(1, 0), value(1, 1), value(1, 2));
+    Serial.println(row);
+    sprintf(row, "  [%.4f %.4f %.4f]", value(2, 0), value(2, 1), value(2, 2));
+    Serial.println(row);
+}
+
 void debug::plot(const Vec3 &value, const char *label) {
     static unsigned long last_log_us = 0;
     unsigned long now = micros();

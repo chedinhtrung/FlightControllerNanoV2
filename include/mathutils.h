@@ -22,15 +22,17 @@ inline EulerAngle to_rad(const EulerAngle &e)
 }
 
 // Compute rotation quaternion from two direction vectors
-inline Quaternion quatFromTwoUnitVectors(Vec3 from, Vec3 to) {
+inline Quaternion quatFromTwoUnitVectors(Vec3 from, Vec3 to)
+{
     float c = dot(from, to);
     Vec3 v = cross(from, to);
 
-    if (c < -0.9999f) {
+    if (c < -0.9999f)
+    {
         // 180 degrees: choose any axis perpendicular to from
         Vec3 axis = normalize(abs(from.x) < 0.9f
-            ? cross(from, Vec3{1,0,0})
-            : cross(from, Vec3{0,1,0}));
+                                  ? cross(from, Vec3{1, 0, 0})
+                                  : cross(from, Vec3{0, 1, 0}));
 
         return Quaternion{0.0f, axis.x, axis.y, axis.z}; // w,x,y,z
     }
@@ -39,14 +41,13 @@ inline Quaternion quatFromTwoUnitVectors(Vec3 from, Vec3 to) {
         1.0f + c,
         v.x,
         v.y,
-        v.z
-    };
+        v.z};
 
     return normalize(q);
 }
 
 // Convert quaternion to yaw - pitch - roll euler angles in radian
-inline EulerAngle quaternionToEuler(const Quaternion& q)
+inline EulerAngle quaternionToEuler(const Quaternion &q)
 {
     EulerAngle e;
 
@@ -58,9 +59,12 @@ inline EulerAngle quaternionToEuler(const Quaternion& q)
     // Pitch: rotation around Y axis
     const float sinp = 2.0f * (q.w * q.y - q.z * q.x);
 
-    if (fabsf(sinp) >= 1.0f) {
+    if (fabsf(sinp) >= 1.0f)
+    {
         e.pitch = copysignf((float)M_PI / 2.0f, sinp);
-    } else {
+    }
+    else
+    {
         e.pitch = asinf(sinp);
     }
 
@@ -72,7 +76,7 @@ inline EulerAngle quaternionToEuler(const Quaternion& q)
     return e;
 }
 
-inline Quaternion eulerToQuaternion(const EulerAngle& e)
+inline Quaternion eulerToQuaternion(const EulerAngle &e)
 {
     // Half angles
     const float cy = cosf(e.yaw * 0.5f);
@@ -97,9 +101,9 @@ inline Quaternion eulerToQuaternion(const EulerAngle& e)
     return q;
 }
 
-// Convert euler angle rate of change to body frame rate of change 
-inline Vec3 eulerRatesToBodyRates(const EulerAngle& attitude,
-                              const EulerAngle& euler_rate)
+// Convert euler angle rate of change to body frame rate of change
+inline Vec3 eulerRatesToBodyRates(const EulerAngle &attitude,
+                                  const EulerAngle &euler_rate)
 {
     const float phi = attitude.roll;
     const float theta = attitude.pitch;
@@ -117,11 +121,9 @@ inline Vec3 eulerRatesToBodyRates(const EulerAngle& attitude,
 
     omega_body.x = roll_dot - yaw_dot * stheta;
 
-    omega_body.y = pitch_dot * cphi
-                 + yaw_dot * sphi * ctheta;
+    omega_body.y = pitch_dot * cphi + yaw_dot * sphi * ctheta;
 
-    omega_body.z = -pitch_dot * sphi
-                 + yaw_dot * cphi * ctheta;
+    omega_body.z = -pitch_dot * sphi + yaw_dot * cphi * ctheta;
 
     return omega_body;
 }
@@ -129,10 +131,9 @@ inline Vec3 eulerRatesToBodyRates(const EulerAngle& attitude,
 inline BLA::Matrix<3, 3> skewSymmetric(const Vec3 &v)
 {
     return {
-        0.0f, -v.z,  v.y,
-         v.z, 0.0f, -v.x,
-        -v.y,  v.x, 0.0f
-    };
+        0.0f, -v.z, v.y,
+        v.z, 0.0f, -v.x,
+        -v.y, v.x, 0.0f};
 }
 
 inline BLA::Matrix<3, 3> exp(const Vec3 &u)
@@ -144,8 +145,7 @@ inline BLA::Matrix<3, 3> exp(const Vec3 &u)
     const BLA::Matrix<3, 3> I = {
         1.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f
-    };
+        0.0f, 0.0f, 1.0f};
 
     if (theta < 1e-6f)
     {
@@ -173,8 +173,7 @@ inline Quaternion qexp(const Vec3 &u)
             0.5f * u.x,
             0.5f * u.y,
             0.5f * u.z,
-            1.0f
-        });
+            1.0f});
     }
 
     const float half_theta = 0.5f * theta;
@@ -184,13 +183,41 @@ inline Quaternion qexp(const Vec3 &u)
         s_over_theta * u.x,
         s_over_theta * u.y,
         s_over_theta * u.z,
-        cosf(half_theta)
-    };
+        cosf(half_theta)};
+}
+
+inline BLA::Matrix<3, 3> quatToRotMat(const Quaternion &q_in)
+{
+    const Quaternion q = normalize(q_in);
+    const float x = q.x;
+    const float y = q.y;
+    const float z = q.z;
+    const float w = q.w;
+
+    const float xx = x * x;
+    const float yy = y * y;
+    const float zz = z * z;
+    const float xy = x * y;
+    const float xz = x * z;
+    const float yz = y * z;
+    const float wx = w * x;
+    const float wy = w * y;
+    const float wz = w * z;
+
+    return {
+        1.0f - 2.0f * (yy + zz), 2.0f * (xy - wz), 2.0f * (xz + wy),
+        2.0f * (xy + wz), 1.0f - 2.0f * (xx + zz), 2.0f * (yz - wx),
+        2.0f * (xz - wy), 2.0f * (yz + wx), 1.0f - 2.0f * (xx + yy)};
 }
 
 inline float blend(float a, float b, float t)
-    {
-        return a + t * (b - a);
-    }
+{
+    return a + t * (b - a);
+}
+
+inline float sqr(float x)
+{
+    return x * x;
+}
 
 #endif

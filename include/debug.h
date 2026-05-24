@@ -2,6 +2,7 @@
 #define DEBUG_H
 
 #include <Arduino.h>
+#include "BasicLinearAlgebra.h"
 #include "datastructs.h"
 #include "drivers/mtf02.h"
 #include "drivers/mpu9250.h"
@@ -17,6 +18,7 @@ void log(const ImuData &value, const char *label = "ImuData");
 void log(const PPMCommand &value, const char *label = "PPMCommand");
 void log(const MTF02Data &value, const char *label = "MTF02");
 void log(float value, const char *label = "float");
+void log(const BLA::Matrix<3, 3> &value, const char *label = "mat3");
 
 void plot(const Vec3 &value, const char *label = "vec");
 void plot(const EulerAngle &value, const char *label = "euler");
