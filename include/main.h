@@ -18,6 +18,8 @@
 #include "pid.h"
 #include "velocity_kf.h"
 
+#include "eskf.h"
+
 
 enum class FlightState
 {

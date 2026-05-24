@@ -32,6 +32,8 @@ unsigned long last_active = micros();
 AttiStabilizer atti_stabilizer = AttiStabilizer();
 VelStabilizer vel_stabilizer = VelStabilizer();
 
+ESKF eskf = ESKF();
+
 void setup()
 {
   Serial.begin(115200);
@@ -64,6 +66,8 @@ void setup()
   madgw = Madgwick(MW_BETA, imu_data.accel);
 
   // Safety lock: arm loop only after throttle is low.
+
+  eskf.setup(imu_data.accel);
   do
   {
     receiver.read(control_raw);
@@ -79,11 +83,16 @@ void loop()
   {
     // Placeholder: optional IMU read error handling.
   }
-  madgw.update(imu_data);
-  vel_kf.predict(imu_data.accel, madgw.q);
+ 
+
+  eskf.propagate(imu_data);
+  eskf.correct_gravity(imu_data.accel);
+
+  //madgw.update(imu_data);
+  vel_kf.predict(imu_data.accel - eskf.nominal.ab, eskf.nominal.q);
 
   update_optical_flow(1000);
-  //update_baro();
+  // update_baro();
 
   PPMCommand cmd_raw{};
   if (!receiver.read(cmd_raw))
@@ -113,7 +122,7 @@ void loop()
         rpy_cmd.C4 * 0.5f};
   }
 
-  MotorAdjust m_adjust = atti_stabilizer.compute_rpy_adjust(madgw.q, angle_target, imu_data.gyro);
+  MotorAdjust m_adjust = atti_stabilizer.compute_rpy_adjust(eskf.nominal.q, angle_target, imu_data.gyro);
 
   // Output to motor, lock until throttle is not 0
 
@@ -129,7 +138,7 @@ void loop()
     reset_flight_controllers();
   }
 
-  //debug::plot(vel_kf.velocity());
+  debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
   while (micros() - last_active < PERIOD_US)
   {
   }

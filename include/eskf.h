@@ -3,6 +3,7 @@
 #include "BasicLinearAlgebra.h"
 #include "datastructs.h"
 #include "mathutils.h"
+#include "devices/imu.h"
 
 struct NominalState
 {
@@ -24,11 +25,12 @@ struct ErrorState
 
 class ESKF
 {
+private:
     BLA::Matrix<15, 15> P;  // Covariance of the estimation
     BLA::Matrix<15, 15> Fx; // Transition
 
     // accel white noise, m/s^2 / sqrt(Hz)
-    float sigma_an = 0.08f;
+    float sigma_an = 0.2f;
 
     // gyro white noise, rad/s / sqrt(Hz)
     float sigma_wn = 0.004f;
@@ -39,16 +41,20 @@ class ESKF
     // gyro bias random walk, rad/s / sqrt(Hz)
     float sigma_ww = 0.00005f;
 
+    uint32_t last_imu_timestamp;
+
 public:
     NominalState nominal;
 
+    ESKF();
+
     void setup(Vec3 accel);
-    void propagate(Vec3 gyro, Vec3 accel, float dt);
+    void propagate(const ImuData &imudata);
 
     void correct_gravity(Vec3 accel);
     void correct_flow(Vec3WithTrust flow);
     void correct_range(FloatWithTrust range_m);
-    void inject(const BLA::Matrix<15, 1> &dx);
+    void inject(ErrorState e);
 };
 
 inline BLA::Matrix<16, 1> pack_nominal(const NominalState &s)

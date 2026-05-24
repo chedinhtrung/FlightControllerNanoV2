@@ -10,7 +10,38 @@ struct EulerAngle
     float yaw = 0.0;
     float pitch = 0.0;
     float roll = 0.0;
+
+    inline EulerAngle operator-(const EulerAngle &other) const
+    {
+        return {yaw - other.yaw, pitch - other.pitch, roll - other.roll};
+    }
+
+    inline EulerAngle &operator-=(const EulerAngle &other)
+    {
+        yaw -= other.yaw;
+        pitch -= other.pitch;
+        roll -= other.roll;
+        return *this;
+    }
+
+    inline EulerAngle operator*(float scalar) const
+    {
+        return {yaw * scalar, pitch * scalar, roll * scalar};
+    }
+
+    inline EulerAngle &operator*=(float scalar)
+    {
+        yaw *= scalar;
+        pitch *= scalar;
+        roll *= scalar;
+        return *this;
+    }
 };
+
+inline EulerAngle operator*(float scalar, const EulerAngle &angle)
+{
+    return angle * scalar;
+}
 
 struct Vec3
 {

@@ -20,6 +20,8 @@ constexpr Vec3 R_G_TO_FLOW = {-0.054, -0.005, 0.002};  // drone COM to sensor
 
 constexpr Vec3 GRAVITY_EARTH {0, 0, 9.81};
 
+constexpr float G_EARTH_MPS2 = 9.81f;
+
 #define RAD_PER_DEG 0.0174533f
 #define DEG_PER_RAD 57.295779f
 #define MW_BETA 0.08f
