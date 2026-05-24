@@ -28,7 +28,7 @@ public:
     bool setup() override;
     bool parse() override;
     bool has_bytes() const override;
-    bool read(MTF02Payload &out) override;
+    bool read(MTF02Data &out) override;
 
 private:
     static constexpr uint8_t kHead = 0xEF;
@@ -37,7 +37,7 @@ private:
 
     HardwareSerial &serial_;
     uint32_t baud_ = 115200;
-    MTF02Payload flow_data_{};
+    MTF02Data flow_data_{};
     bool has_new_sample_ = false;
 
     uint8_t status_ = 0;
@@ -48,6 +48,7 @@ private:
     uint8_t len_ = 0;
     uint8_t checksum_ = 0;
     uint8_t payload_[kMaxPayloadLen] = {0};
+    uint32_t frame_start_us_ = 0;
     uint8_t payload_cnt_ = 0;
 
     bool parse_char(uint8_t byte_in);

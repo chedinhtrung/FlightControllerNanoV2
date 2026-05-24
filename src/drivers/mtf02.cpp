@@ -21,7 +21,7 @@ bool MTF02::has_bytes() const {
     return serial_.available() > 0;
 }
 
-bool MTF02::read(MTF02Payload &out) {
+bool MTF02::read(MTF02Data &out) {
     if (!has_new_sample_) {
         return false;
     }
@@ -34,6 +34,7 @@ bool MTF02::parse_char(uint8_t byte_in) {
     switch (status_) {
         case 0:
             if (byte_in == kHead) {
+                frame_start_us_ = micros();
                 status_ = 1;
             }
             break;
@@ -92,8 +93,9 @@ bool MTF02::decode_current_frame() {
         return false;
     }
 
-    // Layout matches the first bytes of the incoming payload exactly.
-    memcpy(&flow_data_, payload_, sizeof(MTF02Payload));
+    // Payload layout is exactly the MicoAir frame payload.
+    memcpy(&flow_data_.data, payload_, sizeof(MTF02Payload));
+    flow_data_.timestamp = frame_start_us_;
     has_new_sample_ = true;
     return true;
 }
@@ -116,4 +118,5 @@ void MTF02::reset_parser() {
     status_ = 0;
     payload_cnt_ = 0;
     len_ = 0;
+    frame_start_us_ = 0;
 }

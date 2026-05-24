@@ -30,10 +30,7 @@ bool OpticalFlow::has_bytes() const
 
 bool OpticalFlow::read(MTF02Data &out)
 {
-    MTF02Payload data;
-    if (driver_.read(data)){
-        out.data = data; 
-        out.timestamp = micros();
+    if (driver_.read(out)){
         return true;
     }
     return false;
