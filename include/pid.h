@@ -86,7 +86,7 @@ class VelStabilizer
 public:
     inline float deadband_x(float x)
     {
-        constexpr float DB_ENTER = 0.03f;
+        constexpr float DB_ENTER = 0.01f;
         constexpr float DB_EXIT = 0.03f;
 
         static bool in_deadband = true;
@@ -109,7 +109,7 @@ public:
 
     inline float deadband_y(float y)
     {
-        constexpr float DB_ENTER = 0.03f;
+        constexpr float DB_ENTER = 0.01f;
         constexpr float DB_EXIT = 0.03f;
 
         static bool in_deadband = true;

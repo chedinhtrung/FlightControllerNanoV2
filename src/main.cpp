@@ -96,8 +96,8 @@ void loop()
   PPMCommand vxy_cmd = receiver.to_vxy_mode(cmd_raw);
 
   bool airborne =
-      rpy_cmd.C3 > 0.1f &&
-      mtf02_data.data.dist_mm > 20;
+      //rpy_cmd.C3 > 0.1f &&
+      mtf02_data.data.dist_mm > 30;
 
   EulerAngle angle_target;
 
@@ -129,6 +129,21 @@ void loop()
     motor.set_motor(MotorCommand{});
     reset_flight_controllers();
   }
+
+  Vec3 v_world = eskf.nominal.v;
+
+  EulerAngle e = quaternionToEuler(eskf.nominal.q);
+  float cy = cosf(e.yaw);
+  float sy = sinf(e.yaw);
+
+  Vec3 v_v1{
+      cy * v_world.x + sy * v_world.y,
+      -sy * v_world.x + cy * v_world.y,
+      v_world.z};
+  
+  //debug::plot(v_v1);
+  //debug::plot(e * DEG_PER_RAD);
+  //debug::plot(imu_data.accel);
   
   while (micros() - last_active < PERIOD_US)
   {

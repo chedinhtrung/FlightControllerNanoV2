@@ -30,7 +30,7 @@ private:
     BLA::Matrix<15, 15> Fx; // Transition
 
     // accel white noise, m/s^2 / sqrt(Hz)
-    float sigma_an = 0.5f;
+    float sigma_an = 0.9f;
 
     // gyro white noise, rad/s / sqrt(Hz)
     float sigma_wn = 0.004f;
@@ -51,7 +51,7 @@ private:
     float gravity_direction_sigma = 3.0f * DEG_TO_RAD;
 
     // Optical flow uncertainty measured in rad per sec of angular change in the image
-    float flow_sigma_radps = 0.10f; // rad/s, tune
+    float flow_sigma_radps = 0.12f; // rad/s, tune
 
     uint32_t last_imu_timestamp = 0;
 

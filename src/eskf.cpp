@@ -78,6 +78,7 @@ void ESKF::propagate(const ImuData &imudata)
     }
 
     float dt = (uint32_t)(imudata.timestamp - last_imu_timestamp) * 1e-6f;
+
     float dt2 = dt * dt;
 
     Vec3 gyro_u = imudata.gyro - nominal.wb;
@@ -275,7 +276,9 @@ void ESKF::correct_flow(const Vec3WithTrust &flow,
 
     BLA::Matrix<2, 1> y = z - h;
 
-    debug::plot(Vec3{pred_3d.x, FLOW_SIGN_X * flow.value.x, 0});
+    //debug::plot(v_G_B);
+
+    //debug::plot(Vec3{pred_3d.x, FLOW_SIGN_X * flow.value.x, 0});
 
     
     // S = [1 0 0; 0 1 0] because only observe xy
@@ -382,6 +385,7 @@ void ESKF::correct_flow(const Vec3WithTrust &flow,
     e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
 
     inject(e);
+    
 }
 
 void ESKF::correct_zero_velocity(float sigma_mps)
