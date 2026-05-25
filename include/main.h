@@ -51,7 +51,6 @@ extern MTF02 mtf02;
 extern OpticalFlow optical_flow;
 extern MTF02Data mtf02_data;
 
-extern VelKF2 vel_kf;
 extern ESKF eskf;
 
 extern unsigned long last_active;
@@ -59,18 +58,15 @@ extern unsigned long last_active;
 extern AttiStabilizer atti_stabilizer;
 extern VelStabilizer vel_stabilizer;
 
-extern Vec3LPF vel_ctl_lpf;
-
 inline void reset_flight_controllers()
 {
     atti_stabilizer.reset();
     vel_stabilizer.reset();
-    vel_kf.reset();
 }
 
 inline void update_optical_flow(int time_buffer_us)
 {
-    // update state and KF with optical flow's velocity and range
+    // update EKSF 
     // Low priority parse window: consume bytes while data is pending and loop time remains.
     while (optical_flow.has_bytes() && (micros() - last_active) < (PERIOD_US - time_buffer_us))
     {
@@ -81,10 +77,7 @@ inline void update_optical_flow(int time_buffer_us)
 
     if (flow_new_data)
     {
-        // Vec3WithTrust v_v1 = optical_flow.get_compensated_v1frame_vxy(mtf02_data, imu_data.gyro, madgw.q);
-        // vel_kf.updateFlow(Vec3WithTrust{vel_ctl_lpf.update(v_v1.value), v_v1.trust});
-        // FloatWithTrust vz_range = optical_flow.get_compensated_vz(mtf02_data.data.dist_mm * 1e-3f, imu_data.accel, madgw.q);
-        // vel_kf.updateRange(vz_range);
+        // update eskf with flow data. Refer to doc on update model
         Vec3WithTrust flow = optical_flow.get_raw_flow_with_trust(mtf02_data, imu_data.gyro);
         eskf.correct_flow(flow, imu_data.gyro, mtf02_data.data.dist_mm * 1e-3);
     }
@@ -112,13 +105,13 @@ inline EulerAngle compute_angle_target_from_cmd(const PPMCommand &rpy_cmd, const
 
     EulerAngle angle_target_vel;
 
-    // Vec3 v_est = vel_kf.velocity();
     Vec3 v_world = eskf.nominal.v;
 
     EulerAngle e = quaternionToEuler(eskf.nominal.q);
     float cy = cosf(e.yaw);
     float sy = sinf(e.yaw);
-
+    
+    // convert to v1 frame for control
     Vec3 v_v1{
         cy * v_world.x + sy * v_world.y,
         -sy * v_world.x + cy * v_world.y,

@@ -23,10 +23,6 @@ MTF02 mtf02(Serial3);
 OpticalFlow optical_flow(mtf02);
 MTF02Data mtf02_data;
 
-VelKF2 vel_kf = VelKF2();
-
-Vec3LPF vel_ctl_lpf = Vec3LPF(0.6);
-
 unsigned long last_active = micros();
 
 AttiStabilizer atti_stabilizer = AttiStabilizer();
@@ -87,9 +83,6 @@ void loop()
   eskf.propagate(imu_data);
   eskf.correct_gravity(imu_data.accel);
 
-  // madgw.update(imu_data);
-  //vel_kf.predict(imu_data.accel - eskf.nominal.ab, eskf.nominal.q);
-
   update_optical_flow(1000);
   //  update_baro();
 
@@ -103,8 +96,8 @@ void loop()
   PPMCommand vxy_cmd = receiver.to_vxy_mode(cmd_raw);
 
   bool airborne =
-      // rpy_cmd.C3 > 0.2f &&
-      mtf02_data.data.dist_mm > 40;
+      rpy_cmd.C3 > 0.1f &&
+      mtf02_data.data.dist_mm > 20;
 
   EulerAngle angle_target;
 
@@ -114,7 +107,6 @@ void loop()
   }
   else
   {
-    vel_kf.reset();
     eskf.correct_zero_velocity(0.01f);
     angle_target = EulerAngle{
         rpy_cmd.C1,
@@ -137,23 +129,7 @@ void loop()
     motor.set_motor(MotorCommand{});
     reset_flight_controllers();
   }
-
-  // debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
-
-  Vec3 v_world = eskf.nominal.v;
-
-  EulerAngle e = quaternionToEuler(eskf.nominal.q);
-  float cy = cosf(e.yaw);
-  float sy = sinf(e.yaw);
-
-  Vec3 v_v1{
-      cy * v_world.x + sy * v_world.y,
-      -sy * v_world.x + cy * v_world.y,
-      v_world.z};
   
-  //debug::plot(v_v1);
-  //debug::plot(e * DEG_PER_RAD);
-  //debug::plot(imu_data.accel);
   while (micros() - last_active < PERIOD_US)
   {
   }

@@ -51,7 +51,7 @@ void ESKF::setup(Vec3 accel)
     {
         Vec3 a = accel * (1.0f / n);
 
-        // TODO: might need bench verify for correct rpy orientations
+        // TODO: might need explicit reconfig to ease install on different hardware 
         float roll = atan2f(-a.y, -a.z);
         float pitch = atan2f(a.x, sqrtf(a.y * a.y + a.z * a.z));
         float yaw = 0.0f;

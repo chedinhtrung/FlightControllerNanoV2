@@ -7,10 +7,10 @@
 
 orientation q is used as rotation operator for rotating vectors like this: 
 
-- body -> earth: `v_e = q * v_b * q_conj`
-- earth -> body: `v_b = q_conj * v_e * q`
+- body -> earth: $v_e = q * v_b * q^*$
+- earth -> body: `v_b = q^* * v_e * q`
 
-where `q_conj` is quaternion conjugate.
+where `q^*` is quaternion conjugate.
 
 `Madgwick::q` is used as the vehicle attitude quaternion such that gravity in body frame is compared against a fixed DOWN direction during correction.
 
@@ -24,6 +24,28 @@ where `q_conj` is quaternion conjugate.
 - +Z: Down
 
 Body-frame sign/mapping is fixed by `IMU_MAP_*` macros in `include/drivers/mpu9250.h` and applied in `MPU9250::read`.
+
+### 0.3 Aviation Euler sequence convention
+
+Euler angles follow the aviation order:
+
+$$
+\text{yaw} \rightarrow \text{pitch} \rightarrow \text{roll}
+$$
+
+Frame sequence:
+
+$$
+\mathcal{F}_e \xrightarrow{\,R_z(\psi)\,} \mathcal{F}_{v1}
+\xrightarrow{\,R_y(\theta)\,} \mathcal{F}_{v2}
+\xrightarrow{\,R_x(\phi)\,} \mathcal{F}_b
+$$
+
+$$
+R_b^e = R_z(\psi)\,R_y(\theta)\,R_x(\phi)
+$$
+
+where $e$ is earth frame, $v_1$ is vehicle-1 frame, $v_2$ is vehicle-2 frame and $b$ is body / IMU sensor frame
 
 
 ## 1) High-Level Control Stack
@@ -208,4 +230,3 @@ Current accelerometer correction in driver uses affine per-axis correction in bo
 - Optical flow parser: `src/drivers/mtf02.cpp`
 - Receiver normalization: `src/devices/receiver.cpp`
 - Motor mixing/output: `src/devices/motor.cpp`, `src/drivers/motors.cpp`
-
