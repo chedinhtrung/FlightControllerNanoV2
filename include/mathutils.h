@@ -220,4 +220,9 @@ inline float sqr(float x)
     return x * x;
 }
 
+inline float length(const Vec3 &v)
+{
+    return sqrtf(dot(v, v));
+}
+
 #endif

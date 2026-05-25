@@ -1,8 +1,9 @@
 #include "eskf.h"
 #include "debug.h"
+#include "lpf.h"
 
 ESKF::ESKF()
-{   
+{
     // Setting the initial state uncertainty
     P.Fill(0.0f);
 
@@ -16,7 +17,7 @@ ESKF::ESKF()
     P(4, 4) = 0.01f;
     P(5, 5) = 0.01f;
 
-    // attitude error uncertainty. NOT Euler! But for small angle and 
+    // attitude error uncertainty. NOT Euler! But for small angle and
     // initial guess, it can be.
     P(6, 6) = sqr(5.0f * DEG_TO_RAD);  // roll
     P(7, 7) = sqr(5.0f * DEG_TO_RAD);  // pitch
@@ -33,7 +34,8 @@ ESKF::ESKF()
     P(14, 14) = sqr(0.02f);
 }
 
-void ESKF::setup(Vec3 accel){
+void ESKF::setup(Vec3 accel)
+{
     // Compute initial orientation estimate based on earth gravity at rest
 
     // accel in g
@@ -41,38 +43,45 @@ void ESKF::setup(Vec3 accel){
                           accel.y * accel.y +
                           accel.z * accel.z);
 
-    if (n < 1e-6f) {
+    if (n < 1e-6f)
+    {
         nominal.q = Quaternion{0.0f, 0.0f, 0.0f, 1.0f};
-    } else {
-        Vec3 a = accel * (1.0f/n);
+    }
+    else
+    {
+        Vec3 a = accel * (1.0f / n);
 
         // TODO: might need bench verify for correct rpy orientations
-        float roll  = atan2f(-a.y, -a.z);
-        float pitch = atan2f( a.x, sqrtf(a.y * a.y + a.z * a.z));
-        float yaw   = 0.0f;
+        float roll = atan2f(-a.y, -a.z);
+        float pitch = atan2f(a.x, sqrtf(a.y * a.y + a.z * a.z));
+        float yaw = 0.0f;
 
         nominal.q = normalize(eulerToQuaternion(EulerAngle{
             yaw,
             pitch,
-            roll
-        }));
+            roll}));
     }
 
-    nominal.p  = Vec3{0.0f, 0.0f, 0.0f};
-    nominal.v  = Vec3{0.0f, 0.0f, 0.0f};
+    nominal.p = Vec3{0.0f, 0.0f, 0.0f};
+    nominal.v = Vec3{0.0f, 0.0f, 0.0f};
     nominal.ab = Vec3{0.0f, 0.0f, 0.0f}; // m/s^2
     nominal.wb = Vec3{0.0f, 0.0f, 0.0f}; // rad/s
 }
 
-void ESKF::propagate(const ImuData& imudata)
+void ESKF::propagate(const ImuData &imudata)
 {
     // P 60 - 61 Joan Sola
+    if (last_imu_timestamp == 0)
+    {
+        last_imu_timestamp = imudata.timestamp;
+        return;
+    }
 
     float dt = (uint32_t)(imudata.timestamp - last_imu_timestamp) * 1e-6f;
     float dt2 = dt * dt;
 
     Vec3 gyro_u = imudata.gyro - nominal.wb;
-    Vec3 accel_u = imudata.accel*G_EARTH_MPS2 - nominal.ab;
+    Vec3 accel_u = imudata.accel * G_EARTH_MPS2 - nominal.ab;
 
     BLA::Matrix<3, 3> R = quatToRotMat(nominal.q);
 
@@ -108,11 +117,12 @@ void ESKF::propagate(const ImuData& imudata)
     last_imu_timestamp = imudata.timestamp;
 }
 
-void ESKF::inject(ErrorState e){
+void ESKF::inject(const ErrorState &e)
+{
 
     // p64 - 65 eq. 283 - 288 Joan Sola, skipping angle error term for trivial reset
 
-    nominal.p += e.dp; 
+    nominal.p += e.dp;
     nominal.v += e.dv;
     nominal.q *= qexp(e.dtheta);
     nominal.ab += e.dab;
@@ -121,38 +131,40 @@ void ESKF::inject(ErrorState e){
     nominal.q = normalize(nominal.q);
 }
 
-void ESKF::correct_gravity(Vec3 accel)
+void ESKF::correct_gravity(const Vec3 &accel)
 {
     const float acc_norm = sqrtf(
         accel.x * accel.x +
         accel.y * accel.y +
-        accel.z * accel.z
-    );
+        accel.z * accel.z);
 
-    if (acc_norm < 1e-6f) {
+    if (acc_norm < 1e-6f)
+    {
         return;
     }
 
-    //debug::log(accel);
+    // debug::log(accel);
 
     const float g_err = fabsf(acc_norm - 1.0f);
 
     constexpr float FULL_TRUST_ERR = 0.05f;
     constexpr float ZERO_TRUST_ERR = 0.30f;
 
-    if (g_err > ZERO_TRUST_ERR) {
+    if (g_err > ZERO_TRUST_ERR)
+    {
         return;
     }
 
     float trust = 1.0f;
-    if (g_err > FULL_TRUST_ERR) {
+    if (g_err > FULL_TRUST_ERR)
+    {
         float t = (g_err - FULL_TRUST_ERR) / (ZERO_TRUST_ERR - FULL_TRUST_ERR);
         t = constrain(t, 0.0f, 1.0f);
         t = t * t * (3.0f - 2.0f * t);
         trust = 1.0f - t;
     }
 
-    const Vec3 z = accel * (1.0f/acc_norm);
+    const Vec3 z = accel * (1.0f / acc_norm);
 
     const Vec3 f_world{0.0f, 0.0f, -1.0f};
     const Vec3 h = nominal.q.T() * f_world * nominal.q;
@@ -163,23 +175,22 @@ void ESKF::correct_gravity(Vec3 accel)
     H.Fill(0.0f);
 
     // d (measured gravity) / d \\delta theta
-    // here H = d measurement / d error state computed directly 
+    // here H = d measurement / d error state computed directly
     // Not via equation 278 and chain rule
     H.Submatrix<3, 3>(0, 6) = 1.0f * skewSymmetric(h);
 
-    constexpr float BASE_SIGMA = 3.0f * DEG_TO_RAD;
-    const float sigma = BASE_SIGMA / constrain(trust, 0.1f, 1.0f);
+    const float sigma = gravity_direction_sigma / constrain(trust, 0.1f, 1.0f);
 
-    BLA::Matrix<3, 3> R;
-    R.Fill(0.0f);
-    R(0, 0) = sigma * sigma;
-    R(1, 1) = sigma * sigma;
-    R(2, 2) = sigma * sigma;
+    BLA::Matrix<3, 3> V;
+    V.Fill(0.0f);
+    V(0, 0) = sigma * sigma;
+    V(1, 1) = sigma * sigma;
+    V(2, 2) = sigma * sigma;
 
     const BLA::Matrix<15, 15> I = BLA::Eye<15, 15>();
 
     BLA::Matrix<15, 3> PHt = P * ~H;
-    BLA::Matrix<3, 3> S = H * PHt + R;
+    BLA::Matrix<3, 3> S = H * PHt + V;
 
     BLA::Matrix<15, 3> K = PHt * Inverse(S);
 
@@ -187,7 +198,245 @@ void ESKF::correct_gravity(Vec3 accel)
     BLA::Matrix<15, 1> dx = K * y;
 
     BLA::Matrix<15, 15> A = I - K * H;
-    P = A * P * ~A + K * R * ~K;
+    P = A * P * ~A + K * V * ~K;
 
-    inject(unpack_error(dx));
+    ErrorState e = unpack_error(dx);
+
+    // intentionally make this correction only about attitude, not about position / vel
+    e.dp = Vec3{0, 0, 0};
+    e.dv = Vec3{0, 0, 0};
+    e.dab = Vec3{0, 0, 0};
+
+    inject(e);
+}
+
+void ESKF::correct_flow(const Vec3WithTrust &flow,
+                        const Vec3 &gyro,
+                        float range_m)
+{
+    // Refer to the flow observation in the docs
+
+    const float rho = range_m;
+
+    const float trust_x_raw = flow.trust.x;
+    const float trust_y_raw = flow.trust.y;
+
+    if (trust_x_raw <= 0.0f && trust_y_raw <= 0.0f)
+    {
+        return;
+    }
+
+    if (rho < 0.03f || rho > 5.0f)
+    {
+        return;
+    }
+
+    const float trust_x = constrain(trust_x_raw, 0.05f, 1.0f);
+    const float trust_y = constrain(trust_y_raw, 0.05f, 1.0f);
+
+    static Vec3LPF gyro_delay = Vec3LPF(0.3);
+    static Vec3LPF v_body_delay = Vec3LPF(0.3);
+
+    const Vec3 gyro_lagged = gyro_delay.update(gyro);
+    const Vec3 omega_B = gyro_lagged - nominal.wb;
+
+    const Vec3 v_G_B_now = nominal.q.T() * nominal.v * nominal.q;
+    const Vec3 v_G_B = v_body_delay.update(v_G_B_now);
+
+    //const Vec3 omega_B = gyro - nominal.wb;
+
+    // Earth -> body rotation.
+    BLA::Matrix<3, 3> R_EB = quatToRotMat(nominal.q); // body -> earth
+    BLA::Matrix<3, 3> R_BE = ~R_EB;                   // earth -> body
+
+    // COM velocity expressed in body frame.
+    //const Vec3 v_G_B = nominal.q.T() * nominal.v * nominal.q;
+
+    // Lever arm from sensor to observed ground point, expressed as COM->sensor
+    // plus sensor->ground-ray point.
+    const Vec3 r_SO_B{0.0f, 0.0f, rho};
+    const Vec3 r_B = R_G_TO_FLOW + r_SO_B;
+
+    // Predicted raw optical flow angular rate.
+    const Vec3 pred_3d =
+        (v_G_B * -1.0f - cross(omega_B, r_B)) * (1.0f / rho);
+
+    // Flow sensor might be mounted backwards. negative here if needed
+    constexpr float FLOW_SIGN_X = -1.0f;
+    constexpr float FLOW_SIGN_Y = -1.0f;
+
+    BLA::Matrix<2, 1> z = {
+        FLOW_SIGN_X * flow.value.x,
+        FLOW_SIGN_Y * flow.value.y};
+
+    BLA::Matrix<2, 1> h = {
+        pred_3d.x,
+        pred_3d.y};
+
+    BLA::Matrix<2, 1> y = z - h;
+
+    debug::plot(Vec3{pred_3d.x, FLOW_SIGN_X * flow.value.x, 0});
+
+    
+    // S = [1 0 0; 0 1 0] because only observe xy
+    BLA::Matrix<2, 3> S;
+    S = {
+        1.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f};
+
+    // construct H = d measure / d error state, refer to doc
+    BLA::Matrix<2, 15> H;
+    H.Fill(0.0f);
+
+    // H_v = -(1/rho) * S * R_BE
+    H.Submatrix<2, 3>(0, 3) =
+        (-1.0f / rho) * S * R_BE;
+
+    // H_theta = -(1/rho) * S * skew(v_G_B)
+
+    H.Submatrix<2, 3>(0, 6) =
+        (-1.0f / rho) * S * skewSymmetric(v_G_B);
+
+    // H_wb = -(1/rho) * S * skew(r)
+
+    H.Submatrix<2, 3>(0, 12) =
+        (-1.0f / rho) * S * skewSymmetric(r_B);
+
+    // Measurement noise
+    // angular-rate noise in rad/s
+
+    float sigma_x = flow_sigma_radps / trust_x;
+    float sigma_y = flow_sigma_radps / trust_y;
+
+    sigma_x = constrain(sigma_x, flow_sigma_radps, 2.5f);
+    sigma_y = constrain(sigma_y, flow_sigma_radps, 2.5f);
+
+    BLA::Matrix<2, 2> V;
+    V.Fill(0.0f);
+    V(0, 0) = sigma_x * sigma_x;
+    V(1, 1) = sigma_y * sigma_y;
+
+    // Kalman update.
+    BLA::Matrix<15, 2> PHt = P * ~H;
+    BLA::Matrix<2, 2> S_innov = H * PHt + V;
+
+    BLA::Matrix<2, 2> S_inv = Inverse(S_innov);
+
+    BLA::Matrix<1, 1> nis_m = ~y * S_inv * y;
+    float nis = nis_m(0);
+
+    constexpr float FLOW_NIS_GATE = 13.8f;
+
+    if (nis > FLOW_NIS_GATE)
+    {
+        // Soft reject:
+        // Measurement disagrees more than expected, so trust it less
+        // instead of completely ignoring it.
+        float scale = constrain(nis / FLOW_NIS_GATE, 1.0f, 25.0f);
+
+        V(0, 0) *= scale;
+        V(1, 1) *= scale;
+
+        // Recompute innovation covariance with inflated measurement noise.
+        S_innov = H * PHt + V;
+        S_inv = Inverse(S_innov);
+    }
+
+    BLA::Matrix<15, 2> K = PHt * S_inv;
+
+    BLA::Matrix<15, 1> dx = K * y;
+
+    // Joseph covariance update.
+    BLA::Matrix<15, 15> I = BLA::Eye<15, 15>();
+    BLA::Matrix<15, 15> A = I - K * H;
+    P = A * P * ~A + K * V * ~K;
+
+    ErrorState e = unpack_error(dx);
+
+    // Safety gatings
+    // Allow limited influence of dtheta. If more than 3 degrees, saturate at 3 degs
+    constexpr float MAX_DTHETA_CORR = 3.0f * RAD_PER_DEG;
+    float dtheta_norm = sqrtf(dot(e.dtheta, e.dtheta));
+    if (dtheta_norm > MAX_DTHETA_CORR)
+    {
+        e.dtheta *= MAX_DTHETA_CORR / dtheta_norm;
+    }
+
+    // Allow limited influence on v. If more than 30cm/s, saturate at 30cm/s
+    constexpr float MAX_DV_CORR = 0.30f; // m/s per update
+    float dv_norm = sqrtf(dot(e.dv, e.dv));
+    if (dv_norm > MAX_DV_CORR)
+    {
+        e.dv *= MAX_DV_CORR / dv_norm;
+    }
+
+    // Same with gyro bias: if more than 0.01, saturate at 0.01 rad/s
+    constexpr float MAX_DWB_CORR = 0.01f; // rad/s per update
+    float dwb_norm = sqrtf(dot(e.dwb, e.dwb));
+    if (dwb_norm > MAX_DWB_CORR)
+    {
+        e.dwb *= MAX_DWB_CORR / dwb_norm;
+    }
+
+    e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
+    e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
+
+    inject(e);
+}
+
+void ESKF::correct_zero_velocity(float sigma_mps)
+{
+
+    // used to zero velocity and avoid drift when no update is available
+    // and drone is disarmed
+    if (sigma_mps <= 0.0f)
+    {
+        return;
+    }
+
+    // Measurement:
+    //   z = [0, 0, 0]
+    //   h = nominal.v
+    // Residual:
+    //   y = z - h = -nominal.v
+    BLA::Matrix<3, 1> y = {
+        -nominal.v.x,
+        -nominal.v.y,
+        -nominal.v.z};
+
+    BLA::Matrix<3, 15> H;
+    H.Fill(0.0f);
+
+    // H_v = I
+    H.Submatrix<3, 3>(0, 3) = BLA::Eye<3, 3>();
+
+    BLA::Matrix<3, 3> V;
+    V.Fill(0.0f);
+    V(0, 0) = sigma_mps * sigma_mps;
+    V(1, 1) = sigma_mps * sigma_mps;
+    V(2, 2) = sigma_mps * sigma_mps;
+
+    BLA::Matrix<15, 3> PHt = P * ~H;
+    BLA::Matrix<3, 3> S = H * PHt + V;
+
+    BLA::Matrix<3, 3> S_inv = Inverse(S);
+    BLA::Matrix<15, 3> K = PHt * S_inv;
+
+    BLA::Matrix<15, 1> dx = K * y;
+
+    BLA::Matrix<15, 15> I = BLA::Eye<15, 15>();
+    BLA::Matrix<15, 15> A = I - K * H;
+    P = A * P * ~A + K * V * ~K;
+
+    ErrorState e = unpack_error(dx);
+
+    // Safety clamp: zero-velocity update should not inject crazy corrections.
+    constexpr float MAX_DV_CORR = 0.50f; // m/s per update
+    float dv_norm = sqrtf(dot(e.dv, e.dv));
+    if (dv_norm > MAX_DV_CORR)
+    {
+        e.dv *= MAX_DV_CORR / dv_norm;
+    }
+
+    inject(e);
 }

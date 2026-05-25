@@ -30,7 +30,8 @@ bool OpticalFlow::has_bytes() const
 
 bool OpticalFlow::read(MTF02Data &out)
 {
-    if (driver_.read(out)){
+    if (driver_.read(out))
+    {
         return true;
     }
     return false;
@@ -38,7 +39,6 @@ bool OpticalFlow::read(MTF02Data &out)
 
 Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata, const Vec3 gyro, const Quaternion &q)
 {
-
     constexpr float FLOW_RAD_PER_CENTIRAD = 0.01f;
     constexpr float FLOW_QUALITY_MIN = 20.0f;
     constexpr float FLOW_QUALITY_MAX = 255.0f;
@@ -87,7 +87,7 @@ Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata
 
     const Vec3 scaled_gyro = filtered_gyro * gyro_multiplier;
 
-    //debug::plot(Vec3{compensated_flow.x, filtered_gyro.y, 0.0f});
+    // debug::plot(Vec3{compensated_flow.x, filtered_gyro.y, 0.0f});
 
     // Compensate for rotation-induced flow using quality-scaled gyro.
     compensated_flow = Vec3{
@@ -170,9 +170,9 @@ Vec3WithTrust OpticalFlow::get_compensated_v1frame_vxy(const MTF02Data &flowdata
 
 FloatWithTrust OpticalFlow::get_compensated_vz(
     float range_m,
-    const Vec3& accel,
-    const Quaternion& q
-) {
+    const Vec3 &accel,
+    const Quaternion &q)
+{
     constexpr float MIN_RANGE_M = 0.03f;
     constexpr float MAX_RANGE_M = 3.0f;
     constexpr float MIN_COS_TILT = 0.86f;
@@ -180,7 +180,8 @@ FloatWithTrust OpticalFlow::get_compensated_vz(
     constexpr float MAX_VZ_MPS = 5.0f;
     constexpr float MAX_DT_S = 0.20f;
 
-    if (range_m < MIN_RANGE_M || range_m > MAX_RANGE_M) {
+    if (range_m < MIN_RANGE_M || range_m > MAX_RANGE_M)
+    {
         return FloatWithTrust{0.0f, 0.0f};
     }
 
@@ -192,10 +193,10 @@ FloatWithTrust OpticalFlow::get_compensated_vz(
     const float cos_tilt = constrain(
         dot(sensor_down_world, world_down),
         -1.0f,
-        1.0f
-    );
+        1.0f);
 
-    if (cos_tilt < MIN_COS_TILT) {
+    if (cos_tilt < MIN_COS_TILT)
+    {
         return FloatWithTrust{0.0f, 0.0f};
     }
 
@@ -208,7 +209,8 @@ FloatWithTrust OpticalFlow::get_compensated_vz(
 
     const uint32_t now = micros();
 
-    if (!range_vz_initialized_) {
+    if (!range_vz_initialized_)
+    {
         range_vz_initialized_ = true;
         last_height_m_ = height_com_m;
         last_range_update_us_ = now;
@@ -218,7 +220,8 @@ FloatWithTrust OpticalFlow::get_compensated_vz(
 
     const float dt = (uint32_t)(now - last_range_update_us_) * 1e-6f;
 
-    if (dt <= 0.0f || dt > MAX_DT_S) {
+    if (dt <= 0.0f || dt > MAX_DT_S)
+    {
         last_height_m_ = height_com_m;
         last_range_update_us_ = now;
         last_range_vz = 0.0f;
@@ -233,11 +236,12 @@ FloatWithTrust OpticalFlow::get_compensated_vz(
     last_height_m_ = height_com_m;
     last_range_update_us_ = now;
 
-    if (fabsf(dh) > MAX_DH_M || fabsf(vz_down) > MAX_VZ_MPS) {
+    if (fabsf(dh) > MAX_DH_M || fabsf(vz_down) > MAX_VZ_MPS)
+    {
         last_range_vz = vz_down;
         return FloatWithTrust{0.0f, 0.0f};
     }
-    
+
     const float accel_mag_mps2 = 9.81f * sqrtf(dot(accel, accel));
 
     // Range acceleration is noisy, so allow a generous margin.
@@ -245,11 +249,90 @@ FloatWithTrust OpticalFlow::get_compensated_vz(
     constexpr float ACCEL_GATE_BIAS = 3.0f; // m/s^2 extra slack
 
     if (fabsf(range_accel_down) >
-        ACCEL_GATE_MULT * accel_mag_mps2 + ACCEL_GATE_BIAS) {
+        ACCEL_GATE_MULT * accel_mag_mps2 + ACCEL_GATE_BIAS)
+    {
         last_range_vz = vz_down;
         return FloatWithTrust{0.0f, 0.0f};
     }
 
     last_range_vz = vz_down;
     return FloatWithTrust{vz_down, 1.0f};
+}
+
+Vec3WithTrust OpticalFlow::get_raw_flow_with_trust(const MTF02Data &flowdata, Vec3 gyro)
+{
+    constexpr float FLOW_RAD_PER_CENTIRAD = 0.01f;
+    constexpr float FLOW_QUALITY_MIN = 20.0f;
+    constexpr float FLOW_QUALITY_MAX = 255.0f;
+    constexpr float GYRO_MULTIPLIER_MAX = 3.6f;
+
+    const float range_m = 0.001f * static_cast<float>(flowdata.data.dist_mm);
+
+    bool flow_ok =
+        flowdata.data.dist_status == 1 &&
+        flowdata.data.flow_status == 1 &&
+        flowdata.data.flow_quality >= 20;
+
+    if (!flow_ok)
+    {
+        return Vec3WithTrust{Vec3{}, Vec3{}};
+    }
+
+    if (range_m < 0.004f || range_m > 5.0f ||
+        flowdata.data.flow_status != 1 ||
+        flowdata.data.dist_status != 1)
+    {
+        return Vec3WithTrust{Vec3{}, Vec3{}};
+    }
+
+    // Optical flow in sensor angular rate units (rad/s).
+    Vec3 flow_radps{
+        static_cast<float>(flowdata.data.flow_x) * FLOW_RAD_PER_CENTIRAD,
+        static_cast<float>(flowdata.data.flow_y) * FLOW_RAD_PER_CENTIRAD,
+        0.0f};
+
+    // flow_radps = flow_lpf.update(flow_radps); // legacy, no longer needs
+
+    float q_norm = flowdata.data.flow_quality / 255.0f;
+    q_norm = constrain(q_norm, 0.0f, 1.0f);
+
+    // Low quality = low confidence = high scale
+    float quality_scale = 1.0f / (0.70f + 0.30f * q_norm);
+
+    constexpr float FULL_TRUST_H = 2.0f;
+    constexpr float WEAK_TRUST_H = 4.0f;
+    constexpr float MAX_HEIGHT_SCALE = 1.5f;
+
+    float height_scale = 1.0f;
+
+    if (range_m > FULL_TRUST_H)
+    {
+        float t = (range_m - FULL_TRUST_H) / (WEAK_TRUST_H - FULL_TRUST_H);
+        t = constrain(t, 0.0f, 1.0f);
+
+        // sigma grows smoothly from 1x to 4x.
+        height_scale = 1.0f + t * (MAX_HEIGHT_SCALE - 1.0f);
+    }
+
+    // Per-axis gyro confidence.
+    // Keep this moderate because ESKF already models rotation-induced flow.
+    // x-flow is mainly affected by body y-rate; y-flow by body x-rate.
+    constexpr float GYRO_REF = 3.2f;        // rad/s
+    constexpr float GYRO_NOISE_GAIN = 0.35f;
+    constexpr float MAX_GYRO_SCALE = 1.6f;
+
+    float gyro_scale_x = 1.0f + GYRO_NOISE_GAIN * fabsf(gyro.y) / GYRO_REF;
+    float gyro_scale_y = 1.0f + GYRO_NOISE_GAIN * (0.6*fabsf(gyro.x) + 0.4*fabs(gyro.z)) / GYRO_REF;
+
+    gyro_scale_x = constrain(gyro_scale_x, 1.0f, MAX_GYRO_SCALE);
+    gyro_scale_y = constrain(gyro_scale_y, 1.0f, MAX_GYRO_SCALE);
+
+    Vec3 trust = {
+        1.0f / (height_scale * gyro_scale_x * quality_scale),
+        1.0f / (height_scale * gyro_scale_y * quality_scale),
+        0.0f};
+
+    return Vec3WithTrust{
+        flow_radps,
+        trust};
 }

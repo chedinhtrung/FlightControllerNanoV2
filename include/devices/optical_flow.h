@@ -18,6 +18,7 @@ public:
     Vec3WithTrust get_compensated_v1frame_vxy(const MTF02Data &flowdata, const Vec3 gyro, const Quaternion& q);
     FloatWithTrust get_compensated_vz(float range_m, const Vec3& accel, const Quaternion &q);
     
+    Vec3WithTrust get_raw_flow_with_trust(const MTF02Data &flowdata, Vec3 gyro);
     Vec3LPF gyro_lpf;
     Vec3LPF flow_lpf;
 

@@ -30,7 +30,7 @@ private:
     BLA::Matrix<15, 15> Fx; // Transition
 
     // accel white noise, m/s^2 / sqrt(Hz)
-    float sigma_an = 0.2f;
+    float sigma_an = 0.5f;
 
     // gyro white noise, rad/s / sqrt(Hz)
     float sigma_wn = 0.004f;
@@ -41,7 +41,19 @@ private:
     // gyro bias random walk, rad/s / sqrt(Hz)
     float sigma_ww = 0.00005f;
 
-    uint32_t last_imu_timestamp;
+    // How much we trust gravity direction to reflect
+    // drone's orientation
+    // unit is radian, meaning we trust the difference from accel to be
+    // around 3 degrees relative to the true gravity vector
+    // in truth the error is dimensionless (just error between 2 unit vectors)
+    // but for small errors, it approximately IS the angle in radian which we use
+    // for ease of interpretability
+    float gravity_direction_sigma = 3.0f * DEG_TO_RAD;
+
+    // Optical flow uncertainty measured in rad per sec of angular change in the image
+    float flow_sigma_radps = 0.10f; // rad/s, tune
+
+    uint32_t last_imu_timestamp = 0;
 
 public:
     NominalState nominal;
@@ -51,10 +63,12 @@ public:
     void setup(Vec3 accel);
     void propagate(const ImuData &imudata);
 
-    void correct_gravity(Vec3 accel);
-    void correct_flow(Vec3WithTrust flow);
-    void correct_range(FloatWithTrust range_m);
-    void inject(ErrorState e);
+    void correct_gravity(const Vec3 &accel);
+    void correct_flow(const Vec3WithTrust &flow, const Vec3 &gyro, float range_m);
+    void correct_range(const FloatWithTrust &range_m);
+    void inject(const ErrorState &e);
+
+    void correct_zero_velocity(float sigma_mps = 0.03f);
 };
 
 inline BLA::Matrix<16, 1> pack_nominal(const NominalState &s)
