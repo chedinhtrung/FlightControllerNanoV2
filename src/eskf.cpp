@@ -381,8 +381,8 @@ void ESKF::correct_flow(const Vec3WithTrust &flow,
         e.dwb *= MAX_DWB_CORR / dwb_norm;
     }
 
-    e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
-    e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
+    //e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
+    //e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
 
     inject(e);
     

@@ -51,7 +51,7 @@ private:
     float gravity_direction_sigma = 3.0f * DEG_TO_RAD;
 
     // Optical flow uncertainty measured in rad per sec of angular change in the image
-    float flow_sigma_radps = 0.12f; // rad/s, tune
+    float flow_sigma_radps = 0.15f; // rad/s, tune
 
     uint32_t last_imu_timestamp = 0;
 
