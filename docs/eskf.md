@@ -292,14 +292,14 @@ $$
 h(x_t) = C + \frac{1}{\rho} S [-({}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}) \times (w_b + \delta w_b) - \exp(\delta \theta)^T \ {}_ER_B^T  \ (v + \delta v)]
 $$
 
-And using the same small angle approximation $\exp(\delta {\theta}) \approx I + [\delta {\theta}]_\times$ we get the Jacobian blocks that are the derivative w.r.t $\delta{v}$, $\delta{\theta}$ and $\delta_{w_b}$: 
+And using the same small angle approximation $\exp(\delta {\theta}) \approx I + [\delta {\theta}]_\times$ we get the Jacobian blocks that are the derivative w.r.t $\delta {v}$, $\delta {\theta}$ and $\delta {w_b}$: 
 
 $$H_v = -\frac{1}{\rho} \ S \ {}_B R_E$$
 
 $$H_\theta = - \frac{1}{\rho} \ S \ [{}_B R_E v]_\times
 $$
 
-$$H_{w_b} = - \frac{1}{\rho} \ S \ [{}_B r_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}]_\times
+$$H_{w_b} = - \frac{1}{\rho} \ S \ [{}_B r_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}]_{\times}
 $$
 
 So that now we can construct the entire Jacobian w.r.t the error state as: 
