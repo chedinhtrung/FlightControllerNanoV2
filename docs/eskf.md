@@ -311,10 +311,5 @@ $$
 
 So that now we can construct the entire Jacobian w.r.t the error state as: 
 
-$$
-  \mathbf{H}
-  =
-  \begin{bmatrix}
-  \mathbf{0}_{2\times3} & \mathbf{H}_v & \mathbf{H}_\theta & \mathbf{0}_{2\times3} & \mathbf{H}_{w_b}
-  \end{bmatrix}
+$$\mathbf{H} = \begin{bmatrix} \mathbf{0}_{2\times3} & \mathbf{H}_v & \mathbf{H}_\theta & \mathbf{0}_{2\times3} & \mathbf{H}_{w_b}\end{bmatrix}
 $$
