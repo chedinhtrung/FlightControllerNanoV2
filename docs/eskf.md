@@ -151,10 +151,7 @@ $$
 and can be written with chain rule as:
 
 $$
-\mathbf{H}
-=
-\left.\frac{\partial h}{\partial \mathbf{x}}\right|_{\hat{\mathbf{x}}}
-\left.\frac{\partial \mathbf{x}}{\partial \delta\mathbf{x}}\right|_{\delta\mathbf{x}=0} = H_x \cdot X_{\delta x}
+\mathbf{H} = \left.\frac{\partial h}{\partial \mathbf{x}}\right|_{\hat{\mathbf{x}}}\left.\frac{\partial \mathbf{x}}{\partial \delta\mathbf{x}}\right|_{\delta\mathbf{x}=0} = H_x \cdot X_{\delta x}
 $$
 
 The filter update is:
@@ -290,10 +287,12 @@ $$h(x) = C + \frac{1}{\rho}S [-({}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{b
 $$
 
 Now pertube the states with $\delta w_b$ and $\delta \theta$ we get: 
-$$h(x_t) = C + \frac{1}{\rho} S [-({}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}) \times (w_b + \delta w_b) - \exp(\delta \theta)^T \ {}_ER_B^T  \ (v + \delta v)]
+
+$$
+h(x_t) = C + \frac{1}{\rho} S [-({}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}) \times (w_b + \delta w_b) - \exp(\delta \theta)^T \ {}_ER_B^T  \ (v + \delta v)]
 $$
 
-And using the same small angle approximation $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get the Jacobian blocks that are the derivative w.r.t $\delta v$, $\delta_\theta$ and $\delta_{w_b}$: 
+And using the same small angle approximation $\exp(\delta {\theta}) \approx I + [\delta {\theta}]_\times$ we get the Jacobian blocks that are the derivative w.r.t $\delta{v}$, $\delta{\theta}$ and $\delta_{w_b}$: 
 
 $$H_v = -\frac{1}{\rho} \ S \ {}_B R_E$$
 
