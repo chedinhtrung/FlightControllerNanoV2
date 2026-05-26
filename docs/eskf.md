@@ -267,9 +267,7 @@ $$
 and the center-of-mass velocity expressed in body frame is:
 
 $$
-{}_B\mathbf{v}_G
-=
-{}_B\mathbf{R}_E \ \mathbf{v}
+{}_B\mathbf{v}_G = {}_B\mathbf{R}_E \ \mathbf{v}
 $$
 
 
@@ -278,43 +276,41 @@ Then in the body / sensor frame, its velocity is
 $$
 {}_B\mathbf{v}_S = {}_B\omega_B \times {}_Br_{GS} + {}_BR_E \ v = - {}_B\mathbf{v}_{SO}
 $$
+
 Where $O$ is a reference point on the ground that the sensor is observing, here we approximately say it is the point that the ToF ranger sees.
 
 But the sensor actually observe: 
+
 $$
-  \frac{d}{dt}{}_B \mathbf r_{SO} = {}_B\mathbf v_{SO} - {}_B\omega_B \times \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix} 
+\frac{d}{dt}{}_B \mathbf r_{SO} = {}_B\mathbf v_{SO} - {}_B\omega_B \times \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix} 
 $$
+
 With $\rho$ being the distance from the sensor to $O$ that the ranger is measuring. Furthermore, we only observe the flow in $x$ and $y$ direction, so the full measurement is
-$$
-h(x) = \begin{bmatrix}f_x \\ f_y\end{bmatrix} = \frac{1}{\rho}\begin{bmatrix}1 & 0 & 0 \\ 0 & 1 & 0\end{bmatrix} [ -(w_m - w_b) \times {}_Br_{GS} - {}_BR_E \ v - (w_m - w_b) \times \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix} ]
+
+$$h(x) = \begin{bmatrix}f_x \\ f_y\end{bmatrix} = \frac{1}{\rho}\begin{bmatrix}1 & 0 & 0 \\ 0 & 1 & 0\end{bmatrix} [ -(w_m - w_b) \times {}_Br_{GS} - {}_BR_E \ v - (w_m - w_b) \times \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix} ]
 $$
 
 Pulling the constants out, we have 
 
-$$
-  h(x) = C + \frac{1}{\rho}S [-({}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}) \times w_b - {}_BR_E \ v]
+$$h(x) = C + \frac{1}{\rho}S [-({}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}) \times w_b - {}_BR_E \ v]
 $$
 
 Now pertube the states with $\delta w_b$ and $\delta \theta$ we get: 
-$$
-  h(x_t) = C + \frac{1}{\rho} S [-({}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}) \times (w_b + \delta w_b) - \exp(\delta \theta)^T \ {}_ER_B^T  \ (v + \delta v)]
+$$h(x_t) = C + \frac{1}{\rho} S [-({}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}) \times (w_b + \delta w_b) - \exp(\delta \theta)^T \ {}_ER_B^T  \ (v + \delta v)]
 $$
 
 And using the same small angle approximation $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get the Jacobian blocks that are the derivative w.r.t $\delta v$, $\delta_\theta$ and $\delta_{w_b}$: 
 
-$$
-H_v = -\frac{1}{\rho} \ S \ {}_B R_E
+$$H_v = -\frac{1}{\rho} \ S \ {}_B R_E$$
+
+$$H_\theta = - \frac{1}{\rho} \ S \ [{}_B R_E v]_\times
 $$
 
-$$
-H_\theta = - \frac{1}{\rho} \ S \ [{}_B R_E v]_\times
-$$
-
-$$
-  H_{w_b} = - \frac{1}{\rho} \ S \ [{}_B r_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}]_\times
+$$H_{w_b} = - \frac{1}{\rho} \ S \ [{}_B r_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}]_\times
 $$
 
 So that now we can construct the entire Jacobian w.r.t the error state as: 
+
 $$
   \mathbf{H}
   =
