@@ -208,15 +208,14 @@ be the acceleration in $g$ that we predict to measure in the body frame where $q
 
 Pertube it with small angle $\delta \theta$ we get the true measurement (that the accel reads):
 
+$$h(q_t) = (R(q) \ \exp(\delta \theta))^T \ f_w = \exp(\delta \theta)^TR(q)^Tfw
 $$
-  h(q_t) = (R(q) \ \exp(\delta \theta))^T \ f_w = \exp(\delta \theta)^TR(q)^Tfw
-$$
+
 Now assume that for small $\delta\theta$, we have $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get
 
-$$
-  H = \frac{\partial h(q_t)}{\partial \delta \theta} = \frac{\partial }{\partial \delta \theta} \  (I + [\delta \theta]_\times)^T \ R(q)^T \ f_w \\ 
-  = \frac{\partial }{\partial \delta \theta} \ -[\delta \theta]_\times \ R(q)^T  \ f_w = [R(q)^T \ f_w]_\times \ \delta \theta \\
-  = [R(q)^T [f_w]]_\times = [h(q)]_\times
+$$H = \frac{\partial h(q_t)}{\partial \delta \theta} = \frac{\partial }{\partial \delta \theta} \  (I + [\delta \theta]_\times)^T \ R(q)^T \ f_w \\ 
+= \frac{\partial }{\partial \delta \theta} \ -[\delta \theta]_\times \ R(q)^T  \ f_w = [R(q)^T \ f_w]_\times \ \delta \theta \\
+= [R(q)^T [f_w]]_\times = [h(q)]_\times
 $$
 
 
@@ -236,13 +235,9 @@ We use the following frames and points:
 
 Notation:
 
-- $
-{}_A\mathbf{v}_P
-$ means the velocity of point $P$, expressed in frame $A$.
+- ${}_A\mathbf{v}_P$ means the velocity of point $P$, expressed in frame $A$.
 
-- $
-{}_A\mathbf{r}_{PQ}
-$   means the position vector from point $P$ to point $Q$, expressed in frame $A$.
+- ${}_A\mathbf{r}_{PQ}$   means the position vector from point $P$ to point $Q$, expressed in frame $A$.
 
 The ESKF nominal velocity is:
 
@@ -269,7 +264,6 @@ and the center-of-mass velocity expressed in body frame is:
 $$
 {}_B\mathbf{v}_G = {}_B\mathbf{R}_E \ \mathbf{v}
 $$
-
 
 Then in the body / sensor frame, its velocity is
 
