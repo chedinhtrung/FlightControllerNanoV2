@@ -65,7 +65,9 @@ $$
 Discrete propagation used in code (`ESKF::propagate`):
 
 $$
-\mathbf{p} \leftarrow \mathbf{p} + \mathbf{v}\Delta t + \frac{1}{2}\mathbf{a}_w\Delta t^2 \\\mathbf{v} \leftarrow = \mathbf{v} + \mathbf{a}_w\Delta t \\\mathbf{q} \leftarrow \mathbf{q} \otimes \exp\left((\mathbf{\omega}_m-\boldsymbol{\omega}_b)\Delta t\right)
+\mathbf{p} \leftarrow \mathbf{p} + \mathbf{v}\Delta t + \frac{1}{2}\mathbf{a}_w\Delta t^2 \\
+\mathbf{v} \leftarrow = \mathbf{v} + \mathbf{a}_w\Delta t \\
+\mathbf{q} \leftarrow \mathbf{q} \otimes \exp\left((\mathbf{\omega}_m-\boldsymbol{\omega}_b)\Delta t\right)
 $$
 
 with:
@@ -159,10 +161,7 @@ The filter update is:
 
 $$
 \mathbf{K} = \mathbf{P}\mathbf{H}^\top(\mathbf{H}\mathbf{P}\mathbf{H}^\top + \mathbf{V})^{-1} \\
-
-
 \delta\hat{\mathbf{x}} = \mathbf{K}\mathbf{r}\\
-
 \mathbf{P} \leftarrow (\mathbf{I}-\mathbf{K}\mathbf{H})\mathbf{P}(\mathbf{I}-\mathbf{K}\mathbf{H})^\top + \mathbf{K}\mathbf{V}\mathbf{K}^\top
 $$
 
@@ -176,10 +175,7 @@ $$
 \mathbf{p} \leftarrow \mathbf{p} + \delta\mathbf{p},
 \quad
 \mathbf{v} \leftarrow \mathbf{v} + \delta\mathbf{v} \\
-
-
 \mathbf{q} \leftarrow \mathbf{q} \otimes \exp_q(\delta\boldsymbol{\theta}) \\
-
 \mathbf{a}_b \leftarrow \mathbf{a}_b + \delta\mathbf{a}_b,
 \quad
 \boldsymbol{\omega}_b \leftarrow \boldsymbol{\omega}_b + \delta\boldsymbol{\omega}_b
@@ -205,7 +201,7 @@ Justification:
 Let 
 
 $$
- h(q) = R(q)ᵀ \ \exp(\delta \theta) f_w
+ h(q) = R(q)^T \ \exp(\delta \theta) f_w
 $$
 
 be the acceleration in $g$ that we predict to measure in the body frame where $q$ is our nominal state quaternion and $\delta \theta$ is our error state. 
@@ -213,7 +209,7 @@ be the acceleration in $g$ that we predict to measure in the body frame where $q
 Pertube it with small angle $\delta \theta$ we get the true measurement (that the accel reads):
 
 $$
-  h(q_t) = (R(q) \ \exp(\delta \theta))ᵀ \ f_w = \exp(\delta \theta)^TR(q)^Tfw
+  h(q_t) = (R(q) \ \exp(\delta \theta))^T \ f_w = \exp(\delta \theta)^TR(q)^Tfw
 $$
 Now assume that for small $\delta\theta$, we have $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get
 
@@ -307,15 +303,15 @@ $$
 And using the same small angle approximation $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get the Jacobian blocks that are the derivative w.r.t $\delta v$, $\delta_\theta$ and $\delta_{w_b}$: 
 
 $$
-H_v​= −\frac{1}{\rho} \ ​S \ {}_B​R_E
+H_v = -\frac{1}{\rho} \ S \ {}_B R_E
 $$
 
 $$
-H_\theta ​=− \frac{1}{\rho}​ \ ​S \ [{}_B​R_E v​]_\times​
+H_\theta = - \frac{1}{\rho} \ S \ [{}_B R_E v]_\times
 $$
 
 $$
-  H_{w_b}​​=− \frac{1}{\rho} ​\ S \ [{}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}]_\times
+  H_{w_b} = - \frac{1}{\rho} \ S \ [{}_B r_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}]_\times
 $$
 
 So that now we can construct the entire Jacobian w.r.t the error state as: 
