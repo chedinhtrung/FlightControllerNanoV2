@@ -51,7 +51,7 @@ Following Solà, the continuous-time nominal dynamics are:
 
 $$
 \dot{\mathbf{p}} = \mathbf{v} \\
-\dot{\mathbf{v}} = \mathbf{R}(\mathbf{q})\,(\mathbf{a}_m - \mathbf{a}_b) + \mathbf{g} \\
+\dot{\mathbf{v}} = \mathbf{R}(\mathbf{q})\ (\mathbf{a}_m - \mathbf{a}_b) + \mathbf{g} \\
 \dot{\mathbf{q}} = \mathbf{q} \otimes \frac{1}{2}\,\boldsymbol{\omega} 
 $$
 
@@ -304,7 +304,7 @@ $$
   h(x_t) = C + \frac{1}{\rho} S [-({}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}) \times (w_b + \delta w_b) - \exp(\delta \theta)^T \ {}_ER_B^T  \ (v + \delta v)]
 $$
 
-And using the same small angle approximation $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get the Jacobian blocks: 
+And using the same small angle approximation $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get the Jacobian blocks that are the derivative w.r.t $\delta v$, $\delta_\theta$ and $\delta_{w_b}$: 
 
 $$
 H_v​= −\frac{1}{\rho} \ ​S \ {}_B​R_E
@@ -316,4 +316,13 @@ $$
 
 $$
   H_{w_b}​​=− \frac{1}{\rho} ​\ S \ [{}_Br_{GS} + \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix}]_\times
+$$
+
+So that now we can construct the entire Jacobian w.r.t the error state as: 
+$$
+  \mathbf{H}
+  =
+  \begin{bmatrix}
+  \mathbf{0}_{2\times3} & \mathbf{H}_v & \mathbf{H}_\theta & \mathbf{0}_{2\times3} & \mathbf{H}_{w_b}
+  \end{bmatrix}
 $$
