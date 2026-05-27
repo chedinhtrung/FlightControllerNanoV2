@@ -1,6 +1,7 @@
 #include "eskf.h"
 #include "debug.h"
 #include "lpf.h"
+#include "devices/optical_flow.h"
 
 ESKF::ESKF()
 {
@@ -51,7 +52,7 @@ void ESKF::setup(Vec3 accel)
     {
         Vec3 a = accel * (1.0f / n);
 
-        // TODO: might need explicit reconfig to ease install on different hardware 
+        // TODO: might need explicit reconfig to ease install on different hardware
         float roll = atan2f(-a.y, -a.z);
         float pitch = atan2f(a.x, sqrtf(a.y * a.y + a.z * a.z));
         float yaw = 0.0f;
@@ -78,6 +79,12 @@ void ESKF::propagate(const ImuData &imudata)
     }
 
     float dt = (uint32_t)(imudata.timestamp - last_imu_timestamp) * 1e-6f;
+
+    if (dt <= 0.0f || dt > 0.02f)
+    {
+        last_imu_timestamp = imudata.timestamp;
+        return;
+    }
 
     float dt2 = dt * dt;
 
@@ -116,6 +123,8 @@ void ESKF::propagate(const ImuData &imudata)
     P = Fx * P * ~Fx + Qx;
 
     last_imu_timestamp = imudata.timestamp;
+
+    push_buffer(imudata);
 }
 
 void ESKF::inject(const ErrorState &e)
@@ -211,14 +220,17 @@ void ESKF::correct_gravity(const Vec3 &accel)
     inject(e);
 }
 
-void ESKF::correct_flow(const Vec3WithTrust &flow,
-                        const Vec3 &gyro,
-                        float range_m)
+void ESKF::correct_flow(const MTF02Data &flowdata)
 {
     // Refer to the flow observation in the docs
 
-    const float rho = range_m;
+    const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
 
+    if (closest_buf == nullptr){return;}
+
+    const float rho = flowdata.data.dist_mm * 1e-3;
+
+    Vec3WithTrust flow = get_raw_flow_with_trust(flowdata, closest_buf->imudata.gyro);
     const float trust_x_raw = flow.trust.x;
     const float trust_y_raw = flow.trust.y;
 
@@ -235,23 +247,23 @@ void ESKF::correct_flow(const Vec3WithTrust &flow,
     const float trust_x = constrain(trust_x_raw, 0.05f, 1.0f);
     const float trust_y = constrain(trust_y_raw, 0.05f, 1.0f);
 
-    static Vec3LPF gyro_delay = Vec3LPF(0.3);
-    static Vec3LPF v_body_delay = Vec3LPF(0.3);
+    // static Vec3LPF gyro_delay = Vec3LPF(0.3);
+    // static Vec3LPF v_body_delay = Vec3LPF(0.3);
 
-    const Vec3 gyro_lagged = gyro_delay.update(gyro);
-    const Vec3 omega_B = gyro_lagged - nominal.wb;
+    // const Vec3 gyro_lagged = gyro_delay.update(gyro);
+    // const Vec3 omega_B = gyro_lagged - nominal.wb;
 
-    const Vec3 v_G_B_now = nominal.q.T() * nominal.v * nominal.q;
-    const Vec3 v_G_B = v_body_delay.update(v_G_B_now);
+    NominalState state = closest_buf->state;
+    const Vec3 v_G_B = state.q.T() * state.v * state.q;
 
-    //const Vec3 omega_B = gyro - nominal.wb;
+    const Vec3 omega_B = closest_buf->imudata.gyro - state.wb;
 
     // Earth -> body rotation.
-    BLA::Matrix<3, 3> R_EB = quatToRotMat(nominal.q); // body -> earth
-    BLA::Matrix<3, 3> R_BE = ~R_EB;                   // earth -> body
+    BLA::Matrix<3, 3> R_EB = quatToRotMat(state.q); // body -> earth
+    BLA::Matrix<3, 3> R_BE = ~R_EB;                 // earth -> body
 
     // COM velocity expressed in body frame.
-    //const Vec3 v_G_B = nominal.q.T() * nominal.v * nominal.q;
+    // const Vec3 v_G_B = nominal.q.T() * nominal.v * nominal.q;
 
     // Lever arm from sensor to observed ground point, expressed as COM->sensor
     // plus sensor->ground-ray point.
@@ -276,11 +288,10 @@ void ESKF::correct_flow(const Vec3WithTrust &flow,
 
     BLA::Matrix<2, 1> y = z - h;
 
-    //debug::plot(v_G_B);
+    // debug::plot(v_G_B);
 
     //debug::plot(Vec3{pred_3d.x, FLOW_SIGN_X * flow.value.x, 0});
 
-    
     // S = [1 0 0; 0 1 0] because only observe xy
     BLA::Matrix<2, 3> S;
     S = {
@@ -357,24 +368,24 @@ void ESKF::correct_flow(const Vec3WithTrust &flow,
     ErrorState e = unpack_error(dx);
 
     // Safety gatings
-    // Allow limited influence of dtheta. If more than 3 degrees, saturate at 3 degs
-    constexpr float MAX_DTHETA_CORR = 3.0f * RAD_PER_DEG;
+    // Allow limited influence of dtheta. If more than 0.5 degrees, saturate at 0.5 degs
+    constexpr float MAX_DTHETA_CORR = 0.5f * RAD_PER_DEG;
     float dtheta_norm = sqrtf(dot(e.dtheta, e.dtheta));
     if (dtheta_norm > MAX_DTHETA_CORR)
     {
         e.dtheta *= MAX_DTHETA_CORR / dtheta_norm;
     }
 
-    // Allow limited influence on v. If more than 30cm/s, saturate at 30cm/s
-    constexpr float MAX_DV_CORR = 0.30f; // m/s per update
+    // Allow limited influence on v. If more than 10cm/s, saturate at 10cm/s
+    constexpr float MAX_DV_CORR = 0.10f; // m/s per update
     float dv_norm = sqrtf(dot(e.dv, e.dv));
     if (dv_norm > MAX_DV_CORR)
     {
         e.dv *= MAX_DV_CORR / dv_norm;
     }
 
-    // Same with gyro bias: if more than 0.01, saturate at 0.01 rad/s
-    constexpr float MAX_DWB_CORR = 0.01f; // rad/s per update
+    // Same with gyro bias: if more than 0.001, saturate at 0.001 rad/s
+    constexpr float MAX_DWB_CORR = 0.0008f; // rad/s per update
     float dwb_norm = sqrtf(dot(e.dwb, e.dwb));
     if (dwb_norm > MAX_DWB_CORR)
     {
@@ -385,7 +396,6 @@ void ESKF::correct_flow(const Vec3WithTrust &flow,
     //e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
 
     inject(e);
-    
 }
 
 void ESKF::correct_zero_velocity(float sigma_mps)
@@ -443,4 +453,43 @@ void ESKF::correct_zero_velocity(float sigma_mps)
     }
 
     inject(e);
+}
+
+void ESKF::push_buffer(const ImuData &imudata)
+{
+    state_buf[buf_head] = StateBuffer{
+        imudata,
+        nominal,
+        imudata.timestamp};
+
+    buf_head = (buf_head + 1) % STATE_BUF_SIZE;
+    if (buf_count < STATE_BUF_SIZE)
+    {
+        buf_count++;
+    }
+}
+
+const StateBuffer *ESKF::get_closest_buf(uint32_t timestamp) const
+{
+    if (buf_count == 0)
+    {
+        return nullptr;
+    }
+
+    const StateBuffer *best = nullptr;
+    uint32_t best_err = UINT32_MAX;
+
+    for (uint32_t i = 0; i < buf_count; i++)
+    {
+        const StateBuffer &s = state_buf[i];
+        uint32_t err = time_abs_diff_us(s.timestamp, timestamp);
+
+        if (err < best_err)
+        {
+            best_err = err;
+            best = &s;
+        }
+    }
+
+    return best;
 }

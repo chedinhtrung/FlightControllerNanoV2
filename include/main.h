@@ -16,7 +16,6 @@
 #include "drivers/receiver.h"
 #include "madgwick.h"
 #include "pid.h"
-#include "velocity_kf.h"
 
 #include "eskf.h"
 
@@ -78,8 +77,7 @@ inline void update_optical_flow(int time_buffer_us)
     if (flow_new_data)
     {
         // update eskf with flow data. Refer to doc on update model
-        Vec3WithTrust flow = optical_flow.get_raw_flow_with_trust(mtf02_data, imu_data.gyro);
-        eskf.correct_flow(flow, imu_data.gyro, mtf02_data.data.dist_mm * 1e-3);
+        eskf.correct_flow(mtf02_data);
     }
 }
 

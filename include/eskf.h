@@ -5,6 +5,9 @@
 #include "mathutils.h"
 #include "devices/imu.h"
 
+constexpr uint32_t STATE_BUFFER_US = 100000; // 100ms buffer
+constexpr int STATE_BUF_SIZE = STATE_BUFFER_US / PERIOD_US;
+
 struct NominalState
 {
     Vec3 p;       // position
@@ -21,6 +24,12 @@ struct ErrorState
     Vec3 dtheta;
     Vec3 dab;
     Vec3 dwb;
+};
+
+struct StateBuffer {
+    ImuData imudata; 
+    NominalState state;
+    uint32_t timestamp;
 };
 
 class ESKF
@@ -55,6 +64,13 @@ private:
 
     uint32_t last_imu_timestamp = 0;
 
+    
+    StateBuffer state_buf[STATE_BUF_SIZE];
+    int buf_head = 0;
+    int buf_count = 0; // to keep track of initial when there is garbage data.
+    void push_buffer(const ImuData& imudata);
+    const StateBuffer* get_closest_buf(uint32_t timestamp) const;
+
 public:
     NominalState nominal;
 
@@ -64,8 +80,8 @@ public:
     void propagate(const ImuData &imudata);
 
     void correct_gravity(const Vec3 &accel);
-    void correct_flow(const Vec3WithTrust &flow, const Vec3 &gyro, float range_m);
-    void correct_range(const FloatWithTrust &range_m);
+    void correct_flow(const MTF02Data &flowdata);
+    void correct_range(const MTF02Data &flowdata);
     void inject(const ErrorState &e);
 
     void correct_zero_velocity(float sigma_mps = 0.03f);
@@ -111,4 +127,11 @@ inline ErrorState unpack_error(const BLA::Matrix<15, 1> &dx)
     e.dab = {dx(9), dx(10), dx(11)};
     e.dwb = {dx(12), dx(13), dx(14)};
     return e;
+}
+
+inline uint32_t time_abs_diff_us(uint32_t a, uint32_t b)
+{
+    // compute absolute time diff in micros. Doesnt matter if it overflows
+    int32_t d = (int32_t)(a - b);
+    return d >= 0 ? (uint32_t)d : (uint32_t)(-d);
 }
