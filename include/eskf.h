@@ -64,6 +64,10 @@ private:
 
     float sigma_range_m = 0.05f; // measurement noise of range sensor, in meters/sqrt(Hz)
 
+    float sigma_baro_m = 0.8; // measurement noise of barometer, in meters / sqrt(Hz)
+
+    float baro_offset_m = 0.0f;
+
     uint32_t last_imu_timestamp = 0;
 
     
@@ -87,8 +91,10 @@ public:
 
     void correct_gravity(const Vec3 &accel);
     void ESKF::correct_flow_and_range(const MTF02Data &flowdata);
+    void ESKF::correct_baro(float baro_alt_m, float trust=1.0f);
 
-    void correct_zero_velocity(float sigma_mps = 0.03f);
+    void reset_zero_velocity(float sigma_mps = 0.03f);
+    void reset_baro_offset(float baro_alt_m);
 
     void inject(const ErrorState &e);
 };

@@ -90,7 +90,7 @@ bool MS5611::setup() {
     }
 
     is_ready = read_prom();
-    state = ReadState::kIdle;
+    state = ReadState::Idle;
     has_fresh_sample = false;
     pressure_count_since_temp = 0;
     have_temperature_sample = false;
@@ -124,6 +124,7 @@ bool MS5611::read(BaroData &data) {
     if (!has_fresh_sample) {
         return false;
     }
+    data.timestamp = micros() - BARO_DELAY_US;
     has_fresh_sample = false;
     compute_compensation(data);
     return true;
@@ -136,21 +137,21 @@ void MS5611::kick() {
     }
 
     const uint32_t now = micros();
-    if (state == ReadState::kIdle) {
+    if (state == ReadState::Idle) {
         // Kick pressure conversion and return immediately.
         if (start_conversion(CMD_CONV_D1_OSR4096)) {
             conversion_started_us = now;
-            state = ReadState::kWaitPressure;
+            state = ReadState::WaitPressure;
         }
         return;
     }
 
-    if (state == ReadState::kWaitPressure) {
+    if (state == ReadState::WaitPressure) {
         if ((uint32_t)(now - conversion_started_us) < CONV_TIME_US) {
             return;
         }
         if (!read_adc(raw_pressure)) {
-            state = ReadState::kIdle;
+            state = ReadState::Idle;
             return;
         }
         ++pressure_count_since_temp;
@@ -159,29 +160,29 @@ void MS5611::kick() {
         if (need_temperature) {
             if (start_conversion(CMD_CONV_D2_OSR4096)) {
                 conversion_started_us = now;
-                state = ReadState::kWaitTemperature;
+                state = ReadState::WaitTemp;
             } else {
-                state = ReadState::kIdle;
+                state = ReadState::Idle;
             }
         } else {
             has_fresh_sample = true;
-            state = ReadState::kIdle;
+            state = ReadState::Idle;
         }
         return;
     }
 
-    if (state == ReadState::kWaitTemperature) {
+    if (state == ReadState::WaitTemp) {
         if ((uint32_t)(now - conversion_started_us) < CONV_TIME_US) {
             return;
         }
         if (!read_adc(raw_temperature)) {
-            state = ReadState::kIdle;
+            state = ReadState::Idle;
             return;
         }
 
         have_temperature_sample = true;
         pressure_count_since_temp = 0;
         has_fresh_sample = true;
-        state = ReadState::kIdle;
+        state = ReadState::Idle;
     }
 }

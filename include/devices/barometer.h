@@ -24,7 +24,7 @@ private:
     bool calibrate();
 
     BarometerDriver &driver_;
-    uint32_t period_us_ = 0;
+    uint32_t period_us_ = 20000; // kick it every 20ms
     uint32_t last_kick_us_ = 0;
     float sea_level_pressure_pa_ = 101325.0f;
     float altitude_zero_m_ = 0.0f;

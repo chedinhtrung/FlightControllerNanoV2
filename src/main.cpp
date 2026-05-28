@@ -62,6 +62,14 @@ void setup()
   // Safety lock: arm loop only after throttle is low.
 
   eskf.setup(imu_data.accel);
+
+  while(!barometer.read(baro_data)){
+    barometer.kick();
+    Serial.println("Waiting for baro");
+    delay(10);
+  }
+  eskf.reset_baro_offset(baro_data.altitude_m);
+
   do
   {
     receiver.read(control_raw);
@@ -82,7 +90,7 @@ void loop()
   eskf.correct_gravity(imu_data.accel);
 
   update_optical_flow(1000);
-  //  update_baro();
+  update_baro();
 
   PPMCommand cmd_raw{};
   if (!receiver.read(cmd_raw))
@@ -105,7 +113,8 @@ void loop()
   }
   else
   {
-    eskf.correct_zero_velocity(0.01f);
+    eskf.reset_zero_velocity(0.01f);
+    eskf.reset_baro_offset(baro_data.altitude_m);
     angle_target = EulerAngle{
         rpy_cmd.C1,
         rpy_cmd.C2 * 0.5f,

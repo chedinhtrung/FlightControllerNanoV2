@@ -28,7 +28,6 @@ bool Barometer::read(BaroData &out) {
     if (!driver_.read(sample)) {
         return false;
     }
-    sample.timestamp = micros();
 
     const float raw_altitude_m = 44330.0f * (1.0f - powf(sample.pres_pa / sea_level_pressure_pa_, 0.19029495f));
     const float filtered_altitude_m = altitude_lpf_.update(raw_altitude_m);

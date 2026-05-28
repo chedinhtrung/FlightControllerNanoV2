@@ -659,7 +659,87 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer* closest_b
     inject(e);
 }
 
-void ESKF::correct_zero_velocity(float sigma_mps)
+void ESKF::correct_baro(float baro_alt_m, float trust)
+{
+    if (trust <= 1e-2) return;
+
+    // baro altitude positive up; ESKF p.z positive down
+    const float z = baro_alt_m - baro_offset_m;
+    const float h = -nominal.p.z;
+    const float residual = z - h;
+    
+    if (residual > 0.8){
+        reset_baro_offset(baro_alt_m);
+        return;
+    }
+
+    debug::plot(Vec3{z, h, nominal.v.z});
+
+    BLA::Matrix<1, 1> y = {residual};
+
+    BLA::Matrix<1, 3> Hp = {0.0f, 0.0f, -1.0f};
+
+    BLA::Matrix<1, 1> V = {sigma_baro_m * sigma_baro_m};
+    V *= 1.0f/(trust * trust);
+
+    BLA::Matrix<15, 1> PHt;
+    PHt.Fill(0.0f);
+
+    PHt += P.Submatrix<15, 3>(0, 0) * ~Hp;
+
+    BLA::Matrix<1, 1> S = Hp * PHt.Submatrix<3, 1>(0, 0) + V;
+
+    float S_inv = 1.0f / S(0, 0);
+
+    BLA::Matrix<1, 1> nis_m = ~y * S_inv * y;
+    float nis = nis_m(0);
+
+    constexpr float BARO_NIS_GATE = 10.8f;
+
+    if (nis > BARO_NIS_GATE)
+    {
+        float scale = constrain(nis / BARO_NIS_GATE, 1.0f, 25.0f);
+
+        S -= V;
+        V(0, 0) *= scale;
+        S += V;
+
+        S_inv = 1.0f / S(0, 0);
+    }
+
+    BLA::Matrix<15, 1> K = PHt * S_inv;
+    BLA::Matrix<15, 1> dx = K * y;
+
+    BLA::Matrix<15, 15> KHP;
+    KHP.Fill(0.0f);
+
+    KHP += K * Hp * P.Submatrix<3, 15>(0, 0);
+
+    P = P - KHP - ~KHP + K * S * ~K;
+    P = (P + ~P) * 0.5f;
+
+    ErrorState e = unpack_error(dx);
+
+    // Baro is slow/noisy. Keep it gentle.
+    constexpr float MAX_DPZ_CORR = 0.05f; // m/update
+    constexpr float MAX_DVZ_CORR = 0.05f; // m/s/update
+
+    e.dp.x = 0.0f;
+    e.dp.y = 0.0f;
+    e.dv.x = 0.0f;
+    e.dv.y = 0.0f;
+
+    e.dtheta = Vec3{0, 0, 0};
+    e.dab = Vec3{0, 0, 0};
+    e.dwb = Vec3{0, 0, 0};
+
+    e.dp.z = constrain(e.dp.z, -MAX_DPZ_CORR, MAX_DPZ_CORR);
+    e.dv.z = constrain(e.dv.z, -MAX_DVZ_CORR, MAX_DVZ_CORR);
+
+    inject(e);
+}
+
+void ESKF::reset_zero_velocity(float sigma_mps)
 {
 
     // used to zero velocity and avoid drift when no update is available
@@ -715,6 +795,10 @@ void ESKF::correct_zero_velocity(float sigma_mps)
     }
 
     inject(e);
+}
+
+void ESKF::reset_baro_offset(float baro_alt_m){
+    baro_offset_m = baro_alt_m + nominal.p.z;
 }
 
 void ESKF::push_buffer(const ImuData &imudata)

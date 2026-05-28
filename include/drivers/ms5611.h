@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include "interfaces.h"
 
+constexpr uint32_t BARO_DELAY_US = 90000;
+
 struct BaroData {
     float temp_c = 0.0f;
     float pres_pa = 0.0f;
@@ -23,9 +25,9 @@ public:
 
 private:
     enum class ReadState : uint8_t {
-        kIdle,
-        kWaitPressure,
-        kWaitTemperature
+        Idle,
+        WaitPressure,
+        WaitTemp
     };
 
     bool reset();
@@ -34,7 +36,7 @@ private:
     bool read_adc(uint32_t &value);
     void compute_compensation(BaroData &data);
 
-    ReadState state = ReadState::kIdle;
+    ReadState state = ReadState::Idle;
     uint32_t conversion_started_us = 0;
     uint32_t raw_pressure = 0;
     uint32_t raw_temperature = 0;

@@ -68,7 +68,6 @@ inline void update_optical_flow(int time_buffer_us)
     {
         // update eskf with flow data. Refer to doc on update model
         eskf.correct_flow_and_range(mtf02_data);
-        debug::plot(eskf.nominal.v);
     }
 }
 
@@ -77,7 +76,7 @@ inline void update_baro()
     barometer.kick();
     if (barometer.read(baro_data))
     {
-        
+        eskf.correct_baro(baro_data.altitude_m);
     }
 }
 
