@@ -120,6 +120,8 @@ void ESKF::propagate(const ImuData &imudata)
     Fx.Submatrix<3, 3>(6, 6) = ~exp((gyro_u)*dt);
     Fx.Submatrix<3, 3>(6, 12) = -1.0f * I3 * dt;
 
+    // TODO: Optimize into block-wise multiplication, avoiding zeroes to avoid 15*15 matmul
+
     P = Fx * P * ~Fx + Qx;
 
     last_imu_timestamp = imudata.timestamp;
@@ -197,6 +199,8 @@ void ESKF::correct_gravity(const Vec3 &accel)
     V(1, 1) = sigma * sigma;
     V(2, 2) = sigma * sigma;
 
+    // TODO: Optimize into block-wise multiplication to avoid 15*15 matmul
+
     const BLA::Matrix<15, 15> I = BLA::Eye<15, 15>();
 
     BLA::Matrix<15, 3> PHt = P * ~H;
@@ -226,7 +230,10 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
 
     const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
 
-    if (closest_buf == nullptr){return;}
+    if (closest_buf == nullptr)
+    {
+        return;
+    }
 
     const float rho = flowdata.data.dist_mm * 1e-3;
 
@@ -290,7 +297,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
 
     // debug::plot(v_G_B);
 
-    //debug::plot(Vec3{pred_3d.x, FLOW_SIGN_X * flow.value.x, 0});
+    // debug::plot(Vec3{pred_3d.x, FLOW_SIGN_X * flow.value.x, 0});
 
     // S = [1 0 0; 0 1 0] because only observe xy
     BLA::Matrix<2, 3> S;
@@ -299,21 +306,13 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
         0.0f, 1.0f, 0.0f};
 
     // construct H = d measure / d error state, refer to doc
-    BLA::Matrix<2, 15> H;
-    H.Fill(0.0f);
-
-    // H_v = -(1/rho) * S * R_BE
-    H.Submatrix<2, 3>(0, 3) =
+    BLA::Matrix<2, 3> Hv =
         (-1.0f / rho) * S * R_BE;
 
-    // H_theta = -(1/rho) * S * skew(v_G_B)
-
-    H.Submatrix<2, 3>(0, 6) =
+    BLA::Matrix<2, 3> Htheta =
         (-1.0f / rho) * S * skewSymmetric(v_G_B);
 
-    // H_wb = -(1/rho) * S * skew(r)
-
-    H.Submatrix<2, 3>(0, 12) =
+    BLA::Matrix<2, 3> Hwb =
         (-1.0f / rho) * S * skewSymmetric(r_B);
 
     // Measurement noise
@@ -325,14 +324,27 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
     sigma_x = constrain(sigma_x, flow_sigma_radps, 2.5f);
     sigma_y = constrain(sigma_y, flow_sigma_radps, 2.5f);
 
+    // TODO: Optimize into block-wise multiplication to avoid 15*15 matmul
+
     BLA::Matrix<2, 2> V;
     V.Fill(0.0f);
     V(0, 0) = sigma_x * sigma_x;
     V(1, 1) = sigma_y * sigma_y;
 
     // Kalman update.
-    BLA::Matrix<15, 2> PHt = P * ~H;
-    BLA::Matrix<2, 2> S_innov = H * PHt + V;
+    // H = [0 Hv Htheta 0 Hwb], optimized to only multiply non zero blocks
+    // This mess is just S_innov = HPH^T + V
+    BLA::Matrix<15, 2> PHt;
+    PHt.Fill(0.0f);
+    PHt += P.Submatrix<15, 3>(0, 3) * ~Hv;     // PHt = P[:,v] * Hv.T
+    PHt += P.Submatrix<15, 3>(0, 6) * ~Htheta; // + P[:,theta] * Htheta.T
+    PHt += P.Submatrix<15, 3>(0, 12) * ~Hwb;   // + P[:,wb] * Hwb.T
+
+    BLA::Matrix<2, 2> S_innov = V;
+    S_innov += Hv * PHt.Submatrix<3, 2>(3, 0);     // H_v * PHt[v_rows, :]
+    S_innov += Htheta * PHt.Submatrix<3, 2>(6, 0); // H_theta * PHt[theta_rows, :]
+    S_innov += Hwb * PHt.Submatrix<3, 2>(12, 0);   // H_wb * PHt[wb_rows, :]
+    // end S_innov = HPH^T + V
 
     BLA::Matrix<2, 2> S_inv = Inverse(S_innov);
 
@@ -348,11 +360,12 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
         // instead of completely ignoring it.
         float scale = constrain(nis / FLOW_NIS_GATE, 1.0f, 25.0f);
 
+        // Recompute innovation covariance with inflated measurement noise.
+        S_innov -= V;
         V(0, 0) *= scale;
         V(1, 1) *= scale;
+        S_innov += V;
 
-        // Recompute innovation covariance with inflated measurement noise.
-        S_innov = H * PHt + V;
         S_inv = Inverse(S_innov);
     }
 
@@ -361,9 +374,16 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
     BLA::Matrix<15, 1> dx = K * y;
 
     // Joseph covariance update.
-    BLA::Matrix<15, 15> I = BLA::Eye<15, 15>();
-    BLA::Matrix<15, 15> A = I - K * H;
-    P = A * P * ~A + K * V * ~K;
+    // Optimized for sparse H. This mess is only doing P = (I-KH) P (I-KH)^T + KVK^T
+    BLA::Matrix<15, 15> KHP;
+    KHP.Fill(0.0f);
+
+    KHP += K * Hv * P.Submatrix<3, 15>(3, 0);
+    KHP += K * Htheta * P.Submatrix<3, 15>(6, 0);
+    KHP += K * Hwb * P.Submatrix<3, 15>(12, 0);
+
+    P = P - KHP - ~KHP + K * S_innov * ~K;
+    P = (P + ~P) * 0.5f; // ensure correct symmetric covariance
 
     ErrorState e = unpack_error(dx);
 
@@ -392,8 +412,8 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
         e.dwb *= MAX_DWB_CORR / dwb_norm;
     }
 
-    //e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
-    //e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
+    // e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
+    // e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
 
     inject(e);
 }
@@ -402,7 +422,7 @@ void ESKF::correct_zero_velocity(float sigma_mps)
 {
 
     // used to zero velocity and avoid drift when no update is available
-    // and drone is disarmed
+    // and drone is disarmed. Then we update v = 0 with low uncertainty
     if (sigma_mps <= 0.0f)
     {
         return;
@@ -418,29 +438,30 @@ void ESKF::correct_zero_velocity(float sigma_mps)
         -nominal.v.y,
         -nominal.v.z};
 
-    BLA::Matrix<3, 15> H;
-    H.Fill(0.0f);
-
-    // H_v = I
-    H.Submatrix<3, 3>(0, 3) = BLA::Eye<3, 3>();
-
     BLA::Matrix<3, 3> V;
     V.Fill(0.0f);
     V(0, 0) = sigma_mps * sigma_mps;
     V(1, 1) = sigma_mps * sigma_mps;
     V(2, 2) = sigma_mps * sigma_mps;
 
-    BLA::Matrix<15, 3> PHt = P * ~H;
-    BLA::Matrix<3, 3> S = H * PHt + V;
+    // K = PH^T(HPH^T + V)⁻1 but optimized for
+    // H = [0 I 0 0 0] to avoid zero and 1 multiplications
+    // PHt = P * H.T = P[:, v]
+    BLA::Matrix<15, 3> PHt = P.Submatrix<15, 3>(0, 3);
+
+    // S = H * PHt + V = P[v, v] + V
+    BLA::Matrix<3, 3> S = P.Submatrix<3, 3>(3, 3) + V;
 
     BLA::Matrix<3, 3> S_inv = Inverse(S);
     BLA::Matrix<15, 3> K = PHt * S_inv;
 
     BLA::Matrix<15, 1> dx = K * y;
 
-    BLA::Matrix<15, 15> I = BLA::Eye<15, 15>();
-    BLA::Matrix<15, 15> A = I - K * H;
-    P = A * P * ~A + K * V * ~K;
+    // Joseph covariance update.
+    // Optimized for sparse H. This mess is only doing P = (I-KH) P (I-KH)^T + KVK^T
+    BLA::Matrix<15, 15> KHP = K * P.Submatrix<3, 15>(3, 0);
+    P = P - KHP - ~KHP + K * S * ~K;
+    P = (P + ~P) * 0.5f;              // Enforce symmetric covariance
 
     ErrorState e = unpack_error(dx);
 
