@@ -5,6 +5,7 @@ PPMReceiver::PPMReceiver() {
 }
 
 bool PPMReceiver::read(PPMCommand &cmd) {
+    cmd.timestamp = micros();
     cmd.C1 = in.read(1);
     cmd.C2 = in.read(2);
     cmd.C3 = in.read(3);

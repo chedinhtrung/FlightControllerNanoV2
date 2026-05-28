@@ -58,6 +58,8 @@ PPMCommand Receiver::to_vxy_mode(const PPMCommand& cmd) const {
     // Yaw rate (degrees / s)
     out.C1 = constrain(out.C1, -35.0f, 35.0f);
 
+    out.timestamp = cmd.timestamp;
+
     return out;
 }
 

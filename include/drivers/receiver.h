@@ -14,6 +14,11 @@ struct PPMCommand {
     float C4 = 1500.0f;
     float C5 = 1000.0f;
     float C6 = 1000.0f;
+    float C7 = 1000.0f;
+    float C8 = 1000.0f;
+    float C9 = 1000.0f;
+    float C10 = 1000.0f;
+    uint32_t timestamp;
 };
 
 struct RPICommand {
