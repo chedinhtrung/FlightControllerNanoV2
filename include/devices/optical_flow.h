@@ -52,7 +52,7 @@ inline Vec3WithTrust get_raw_flow_with_trust(const MTF02Data &flowdata, Vec3 gyr
         return Vec3WithTrust{Vec3{}, Vec3{}};
     }
 
-    if (range_m < 0.004f || range_m > 5.0f ||
+    if (range_m < 0.01f || range_m > 5.0f ||
         flowdata.data.flow_status != 1 ||
         flowdata.data.dist_status != 1)
     {

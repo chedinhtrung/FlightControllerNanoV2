@@ -1,7 +1,5 @@
 #include "main.h"
 
-FlightState flightstate = FlightState::DISARMED;
-
 MPU9250 imu;
 Imu imu_device(imu);
 ImuData imu_data;

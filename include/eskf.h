@@ -42,7 +42,7 @@ private:
     float sigma_an = 0.9f;
 
     // gyro white noise, rad/s / sqrt(Hz)
-    float sigma_wn = 0.004f;
+    float sigma_wn = 0.003f;
 
     // accel bias random walk, m/s^2 / sqrt(Hz)
     float sigma_aw = 0.002f;

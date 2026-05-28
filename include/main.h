@@ -19,16 +19,6 @@
 
 #include "eskf.h"
 
-enum class FlightState
-{
-    DISARMED,
-    ARMED_IDLE,
-    TAKEOFF,
-    AIRBORNE
-};
-
-extern FlightState flightstate;
-
 extern MPU9250 imu;
 extern Imu imu_device;
 extern ImuData imu_data;
