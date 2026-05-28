@@ -204,8 +204,13 @@ public:
 };
 
 class VzStabilizer {
-    PID vy_pid_l2 = PID(35.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
+    PID vz_pid = PID(0.2, 0.04f, 0.015f, 0.05f, 0.1f);
 
+    inline float thrust_adjust_from_vz_error(float vz_error){
+        float adj = vz_pid.calculate(vz_error);
+        adj = constrain(adj, -0.2, 0.2);
+        return adj;
+    }
 };
 
 #endif

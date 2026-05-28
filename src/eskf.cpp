@@ -305,7 +305,8 @@ void ESKF::correct_gravity(const Vec3 &accel)
     inject(e);
 }
 
-void ESKF::correct_flow_and_range(const MTF02Data &flowdata){
+void ESKF::correct_flow_and_range(const MTF02Data &flowdata)
+{
     const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
     if (closest_buf == nullptr)
     {
@@ -315,11 +316,11 @@ void ESKF::correct_flow_and_range(const MTF02Data &flowdata){
     correct_range(flowdata, closest_buf);
 }
 
-void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer* closest_buf)
+void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer *closest_buf)
 {
     // Refer to the flow observation in the docs
 
-    //const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
+    // const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
 
     if (closest_buf == nullptr)
     {
@@ -507,9 +508,9 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer* closest_bu
     inject(e);
 }
 
-void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer* closest_buf)
+void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer *closest_buf)
 {
-    //const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
+    // const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
 
     if (closest_buf == nullptr)
     {
@@ -562,8 +563,8 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer* closest_b
         rho - rho_pred};
 
     constexpr float TERRAIN_JUMP_GATE_M = 0.10f; // tune 0.10-0.20 m
-    
-    // if the height suddenly jumps compared to prediction, we 
+
+    // if the height suddenly jumps compared to prediction, we
     // probly flew over a terrain bump like a table
     // then we just update h_terrain
     if (fabsf(rho - rho_pred) > TERRAIN_JUMP_GATE_M)
@@ -661,26 +662,62 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer* closest_b
 
 void ESKF::correct_baro(float baro_alt_m, float trust)
 {
-    if (trust <= 1e-2) return;
+    if (trust <= 1e-2)
+        return;
 
     // baro altitude positive up; ESKF p.z positive down
     const float z = baro_alt_m - baro_offset_m;
     const float h = -nominal.p.z;
     const float residual = z - h;
-    
-    if (residual > 0.8){
-        reset_baro_offset(baro_alt_m);
+
+    static float residual_int = 0.0f;
+    static float baro_sum = 0.0f;
+    static uint8_t baro_cnt = 0;
+
+    constexpr float BARO_SPIKE_REJECT_M = 1.2f;       // reject one-off garbage
+    constexpr float BARO_RESIDUAL_DEADBAND_M = 0.08f; // ignore normal noise
+    constexpr float BARO_RESET_INT_M = 2.5f;          // sample-wise residual integral
+
+    // Huge residual: probably a spike. Ignore it completely.
+    if (fabsf(residual) > BARO_SPIKE_REJECT_M)
+    {
         return;
     }
 
-    debug::plot(Vec3{z, h, nominal.v.z});
+    // Normal small residual: reset detector and continue normal baro fusion.
+    if (fabsf(residual) < BARO_RESIDUAL_DEADBAND_M)
+    {
+        residual_int = 0.0f;
+        baro_sum = 0.0f;
+        baro_cnt = 0;
+    }
+    else
+    {
+        // Persistent medium residual: likely baro offset error.
+        residual_int += residual;
+        baro_sum += baro_alt_m;
+        baro_cnt++;
+
+        if (fabsf(residual_int) > BARO_RESET_INT_M)
+        {
+            reset_baro_offset(baro_sum / static_cast<float>(baro_cnt));
+
+            residual_int = 0.0f;
+            baro_sum = 0.0f;
+            baro_cnt = 0;
+        }
+
+        return;
+    }
+
+    //debug::plot(Vec3{z, h, nominal.v.z});
 
     BLA::Matrix<1, 1> y = {residual};
 
     BLA::Matrix<1, 3> Hp = {0.0f, 0.0f, -1.0f};
 
     BLA::Matrix<1, 1> V = {sigma_baro_m * sigma_baro_m};
-    V *= 1.0f/(trust * trust);
+    V *= 1.0f / (trust * trust);
 
     BLA::Matrix<15, 1> PHt;
     PHt.Fill(0.0f);
@@ -797,7 +834,8 @@ void ESKF::reset_zero_velocity(float sigma_mps)
     inject(e);
 }
 
-void ESKF::reset_baro_offset(float baro_alt_m){
+void ESKF::reset_baro_offset(float baro_alt_m)
+{
     baro_offset_m = baro_alt_m + nominal.p.z;
 }
 
