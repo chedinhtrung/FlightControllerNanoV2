@@ -101,28 +101,106 @@ void ESKF::propagate(const ImuData &imudata)
     nominal.v = nominal.v + a_world * dt;
     nominal.q = normalize(nominal.q * qexp(gyro_u * dt));
 
-    BLA::Matrix<15, 15> Qx;
-    Qx.Fill(0.0f);
 
+    // This mess is doint P = FPF^T + Qx, but optimized for the fact that 
+    // F is mostly zeroes and I 
     const BLA::Eye<3, 3> I3 = BLA::Eye<3, 3>();
 
-    // p61. eq. 268-271 Joan Sola
+    const BLA::Matrix<3, 3> Ra_udt =
+        R * skewSymmetric(accel_u) * dt;
 
-    Qx.Submatrix<3, 3>(3, 3) = sigma_an * sigma_an * dt2 * I3;
-    Qx.Submatrix<3, 3>(6, 6) = sigma_wn * sigma_wn * dt2 * I3;
-    Qx.Submatrix<3, 3>(9, 9) = sigma_aw * sigma_aw * dt * I3;
-    Qx.Submatrix<3, 3>(12, 12) = sigma_ww * sigma_ww * dt * I3;
+    const BLA::Matrix<3, 3> Rdt =
+        R * dt;
 
-    Fx = BLA::Eye<15, 15>();
-    Fx.Submatrix<3, 3>(0, 3) = I3 * dt;
-    Fx.Submatrix<3, 3>(3, 6) = -1.0f * R * skewSymmetric(accel_u) * dt;
-    Fx.Submatrix<3, 3>(3, 9) = -1.0f * R * dt;
-    Fx.Submatrix<3, 3>(6, 6) = ~exp((gyro_u)*dt);
-    Fx.Submatrix<3, 3>(6, 12) = -1.0f * I3 * dt;
+    const BLA::Matrix<3, 3> w_udt =
+        ~exp(gyro_u * dt);
 
-    // TODO: Optimize into block-wise multiplication, avoiding zeroes to avoid 15*15 matmul
+    // PFt = P * F.T
+    BLA::Matrix<15, 15> PFt;
+    PFt.Fill(0.0f);
 
-    P = Fx * P * ~Fx + Qx;
+    // PFt[:, p] = P[:, p] + P[:, v] * dt
+    PFt.Submatrix<15, 3>(0, 0) =
+        P.Submatrix<15, 3>(0, 0) +
+        P.Submatrix<15, 3>(0, 3) * dt;
+
+    // PFt[:, v] = P[:, v] + P[:, theta] * A.T + P[:, ab] * B.T
+    PFt.Submatrix<15, 3>(0, 3) =
+        P.Submatrix<15, 3>(0, 3) +
+        P.Submatrix<15, 3>(0, 6) * ~-Ra_udt +
+        P.Submatrix<15, 3>(0, 9) * ~-Rdt;
+
+    // PFt[:, theta] = P[:, theta] * C.T + P[:, wb] * (-dt)
+    PFt.Submatrix<15, 3>(0, 6) =
+        P.Submatrix<15, 3>(0, 6) * ~w_udt -
+        P.Submatrix<15, 3>(0, 12) * dt;
+
+    // PFt[:, ab] = P[:, ab]
+    PFt.Submatrix<15, 3>(0, 9) = P.Submatrix<15, 3>(0, 9) * 1.0f;
+
+    // PFt[:, wb] = P[:, wb]
+    PFt.Submatrix<15, 3>(0, 12) = P.Submatrix<15, 3>(0, 12) * 1.0f;
+
+    // -----------------------------------------------------------------------------
+    // Pnew = F * PFt + Qx
+    // -----------------------------------------------------------------------------
+
+    BLA::Matrix<15, 15> Pnew;
+    Pnew.Fill(0.0f);
+
+    // Pnew[p, :] = PFt[p, :] + PFt[v, :] * dt
+    Pnew.Submatrix<3, 15>(0, 0) =
+        PFt.Submatrix<3, 15>(0, 0) +
+        PFt.Submatrix<3, 15>(3, 0) * dt;
+
+    // Pnew[v, :] = PFt[v, :] + A * PFt[theta, :] + B * PFt[ab, :]
+    Pnew.Submatrix<3, 15>(3, 0) =
+        PFt.Submatrix<3, 15>(3, 0) -
+        Ra_udt * PFt.Submatrix<3, 15>(6, 0) -
+        Rdt * PFt.Submatrix<3, 15>(9, 0);
+
+    // Pnew[theta, :] = C * PFt[theta, :] - PFt[wb, :] * dt
+    Pnew.Submatrix<3, 15>(6, 0) =
+        w_udt * PFt.Submatrix<3, 15>(6, 0) -
+        PFt.Submatrix<3, 15>(12, 0) * dt;
+
+    // Pnew[ab, :] = PFt[ab, :]
+    Pnew.Submatrix<3, 15>(9, 0) = PFt.Submatrix<3, 15>(9, 0) * 1.0f;
+
+    // Pnew[wb, :] = PFt[wb, :]
+    Pnew.Submatrix<3, 15>(12, 0) = PFt.Submatrix<3, 15>(12, 0) * 1.0f;
+
+    // -----------------------------------------------------------------------------
+    // Add Qx. No need to construct full Qx.
+    // -----------------------------------------------------------------------------
+
+    const float q_v = sigma_an * sigma_an * dt2;
+    const float q_th = sigma_wn * sigma_wn * dt2;
+    const float q_ab = sigma_aw * sigma_aw * dt;
+    const float q_wb = sigma_ww * sigma_ww * dt;
+
+    // velocity block, indices 3..5
+    Pnew(3, 3) += q_v;
+    Pnew(4, 4) += q_v;
+    Pnew(5, 5) += q_v;
+
+    // attitude block, indices 6..8
+    Pnew(6, 6) += q_th;
+    Pnew(7, 7) += q_th;
+    Pnew(8, 8) += q_th;
+
+    // accel bias block, indices 9..11
+    Pnew(9, 9) += q_ab;
+    Pnew(10, 10) += q_ab;
+    Pnew(11, 11) += q_ab;
+
+    // gyro bias block, indices 12..14
+    Pnew(12, 12) += q_wb;
+    Pnew(13, 13) += q_wb;
+    Pnew(14, 14) += q_wb;
+
+    // Keep covariance symmetric against float roundoff.
+    P = (Pnew + ~Pnew) * 0.5f;
 
     last_imu_timestamp = imudata.timestamp;
 
@@ -150,7 +228,7 @@ void ESKF::correct_gravity(const Vec3 &accel)
         accel.y * accel.y +
         accel.z * accel.z);
 
-    if (acc_norm < 1e-6f)
+    if (acc_norm < 1e-4f)
     {
         return;
     }
@@ -159,8 +237,9 @@ void ESKF::correct_gravity(const Vec3 &accel)
 
     const float g_err = fabsf(acc_norm - 1.0f);
 
+    // Trust gravity when it is closer to unit length
     constexpr float FULL_TRUST_ERR = 0.05f;
-    constexpr float ZERO_TRUST_ERR = 0.30f;
+    constexpr float ZERO_TRUST_ERR = 0.20f;
 
     if (g_err > ZERO_TRUST_ERR)
     {
@@ -183,13 +262,10 @@ void ESKF::correct_gravity(const Vec3 &accel)
 
     const Vec3 r = z - h;
 
-    BLA::Matrix<3, 15> H;
-    H.Fill(0.0f);
-
-    // d (measured gravity) / d \\delta theta
-    // here H = d measurement / d error state computed directly
-    // Not via equation 278 and chain rule
-    H.Submatrix<3, 3>(0, 6) = 1.0f * skewSymmetric(h);
+    // H = [0 0 Htheta 0 0] (observation assumed to only depend on orientation)
+    // In reality it also needs ab (accel bias). Suggestion for further improvement
+    // Optimized for blockwise update. This mess is doing K = HP(HPH^T + V)⁻1 + KVK^T
+    BLA::Matrix<3, 3> Htheta = skewSymmetric(h);
 
     const float sigma = gravity_direction_sigma / constrain(trust, 0.1f, 1.0f);
 
@@ -199,20 +275,26 @@ void ESKF::correct_gravity(const Vec3 &accel)
     V(1, 1) = sigma * sigma;
     V(2, 2) = sigma * sigma;
 
-    // TODO: Optimize into block-wise multiplication to avoid 15*15 matmul
+    // H = [0 0 Htheta 0 0]
 
-    const BLA::Matrix<15, 15> I = BLA::Eye<15, 15>();
+    BLA::Matrix<15, 3> PHt =
+        P.Submatrix<15, 3>(0, 6) * ~Htheta; // PHt = P * H.T = P[:, theta] * Htheta.T
 
-    BLA::Matrix<15, 3> PHt = P * ~H;
-    BLA::Matrix<3, 3> S = H * PHt + V;
+    BLA::Matrix<3, 3> S =
+        Htheta * PHt.Submatrix<3, 3>(6, 0) + V; // S = H * PHt + V = Htheta * PHt[theta, :] + V
 
-    BLA::Matrix<15, 3> K = PHt * Inverse(S);
+    BLA::Matrix<3, 3> S_inv = Inverse(S);
+    BLA::Matrix<15, 3> K = PHt * S_inv;
 
     BLA::Matrix<3, 1> y = {r.x, r.y, r.z};
     BLA::Matrix<15, 1> dx = K * y;
 
-    BLA::Matrix<15, 15> A = I - K * H;
-    P = A * P * ~A + K * V * ~K;
+    // Optimized for blockwise update. This mess is doing P = (I-KH) P (I-KH)^T + KVK^T
+    BLA::Matrix<15, 15> KHP =
+        K * Htheta * P.Submatrix<3, 15>(6, 0); // KHP = K * H * P = K * Htheta * P[theta, :]
+
+    P = P - KHP - ~KHP + K * S * ~K; // P = P - KHP - KHP.T + KSK.T
+    P = (P + ~P) * 0.5f;             // Enforce symmetric covariance
 
     ErrorState e = unpack_error(dx);
 
@@ -323,8 +405,6 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
 
     sigma_x = constrain(sigma_x, flow_sigma_radps, 2.5f);
     sigma_y = constrain(sigma_y, flow_sigma_radps, 2.5f);
-
-    // TODO: Optimize into block-wise multiplication to avoid 15*15 matmul
 
     BLA::Matrix<2, 2> V;
     V.Fill(0.0f);
@@ -461,7 +541,7 @@ void ESKF::correct_zero_velocity(float sigma_mps)
     // Optimized for sparse H. This mess is only doing P = (I-KH) P (I-KH)^T + KVK^T
     BLA::Matrix<15, 15> KHP = K * P.Submatrix<3, 15>(3, 0);
     P = P - KHP - ~KHP + K * S * ~K;
-    P = (P + ~P) * 0.5f;              // Enforce symmetric covariance
+    P = (P + ~P) * 0.5f; // Enforce symmetric covariance
 
     ErrorState e = unpack_error(dx);
 
@@ -500,6 +580,7 @@ const StateBuffer *ESKF::get_closest_buf(uint32_t timestamp) const
     const StateBuffer *best = nullptr;
     uint32_t best_err = UINT32_MAX;
 
+    // line search is fine, we have only max 50 or so
     for (uint32_t i = 0; i < buf_count; i++)
     {
         const StateBuffer &s = state_buf[i];

@@ -118,7 +118,7 @@ void loop()
 
   float throttle = rpy_cmd.C3;
 
-  if (throttle > 0.01 && throttle <= 1.0)
+  if (throttle > 0.005 && throttle <= 1.0)
   {
     motor_device.write(throttle, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
   }
