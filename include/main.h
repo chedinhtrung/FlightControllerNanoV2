@@ -77,10 +77,7 @@ inline void update_baro()
     barometer.kick();
     if (barometer.read(baro_data))
     {
-        // debug::plot(baro_data.altitude_m);
-        FloatWithTrust baro_vel = barometer.get_vz_baro(baro_data.altitude_m);
-        // debug::plot(baro_vel.value);
-        // el_kf.updateBaro(baro_vel);
+        
     }
 }
 
