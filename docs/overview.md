@@ -7,8 +7,8 @@
 
 orientation q is used as rotation operator for rotating vectors like this: 
 
-- body -> earth: $v_e = q * v_b * q^*$
-- earth -> body: `v_b = q^* * v_e * q`
+- body -> earth: $v_e = q \otimes v_b \otimes q^*$
+- earth -> body: $v_b = q^* \otimes v_e \otimes q$
 
 where `q^*` is quaternion conjugate.
 

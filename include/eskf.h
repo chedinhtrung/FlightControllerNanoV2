@@ -39,16 +39,16 @@ private:
     BLA::Matrix<15, 15> Fx; // Transition
 
     // accel white noise, m/s^2 / sqrt(Hz)
-    float sigma_an = 0.9f;
+    float sigma_an_mps2 = 0.9f;
 
     // gyro white noise, rad/s / sqrt(Hz)
-    float sigma_wn = 0.003f;
+    float sigma_wn_radps = 0.003f;
 
     // accel bias random walk, m/s^2 / sqrt(Hz)
     float sigma_aw = 0.002f;
 
     // gyro bias random walk, rad/s / sqrt(Hz)
-    float sigma_ww = 0.00005f;
+    float sigma_ww_radps = 0.00005f;
 
     // How much we trust gravity direction to reflect
     // drone's orientation
@@ -60,7 +60,9 @@ private:
     float gravity_direction_sigma = 3.0f * DEG_TO_RAD;
 
     // Optical flow uncertainty measured in rad per sec of angular change in the image
-    float flow_sigma_radps = 0.15f; // rad/s, tune
+    float sigma_flow_radps = 0.15f; // rad/s / sqrt(Hz)
+
+    float sigma_range_m = 0.05f; // measurement noise of range sensor, in meters/sqrt(Hz)
 
     uint32_t last_imu_timestamp = 0;
 
@@ -71,20 +73,24 @@ private:
     void push_buffer(const ImuData& imudata);
     const StateBuffer* get_closest_buf(uint32_t timestamp) const;
 
+    void correct_flow(const MTF02Data &flowdata, const StateBuffer* closest_buf);
+    void correct_range(const MTF02Data &flowdata, const StateBuffer* closest_buf);
+
 public:
     NominalState nominal;
 
+    float h_terrain = 0; // height of the terrain
     ESKF();
 
     void setup(Vec3 accel);
     void propagate(const ImuData &imudata);
 
     void correct_gravity(const Vec3 &accel);
-    void correct_flow(const MTF02Data &flowdata);
-    void correct_range(const MTF02Data &flowdata);
-    void inject(const ErrorState &e);
+    void ESKF::correct_flow_and_range(const MTF02Data &flowdata);
 
     void correct_zero_velocity(float sigma_mps = 0.03f);
+
+    void inject(const ErrorState &e);
 };
 
 inline BLA::Matrix<16, 1> pack_nominal(const NominalState &s)

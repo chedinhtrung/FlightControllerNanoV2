@@ -67,7 +67,8 @@ inline void update_optical_flow(int time_buffer_us)
     if (flow_new_data)
     {
         // update eskf with flow data. Refer to doc on update model
-        eskf.correct_flow(mtf02_data);
+        eskf.correct_flow_and_range(mtf02_data);
+        debug::plot(eskf.nominal.v);
     }
 }
 

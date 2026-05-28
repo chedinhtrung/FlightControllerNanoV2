@@ -131,7 +131,9 @@ $$
 \end{bmatrix}
 $$
 
-This is to replace Joan Sola's $F_i Q_iF_i^T$ because F_i only consists of $I$ on the diagonal
+This is to replace Joan Sola's $F_i Q_iF_i^T$ because $F_i$ only consists of $I$ on the diagonal. 
+
+Note that the matrix $F_x$ is sparse and mostly consist of $I$ and $0$ blocks. This means in the code we should use blockwise updates instead of a $15\times15$ expensive matrix multiplication.
 
 ## Measurement Update (Generic ESKF Form)
 
@@ -210,15 +212,26 @@ $$
 
 Now assume that for small $\delta\theta$, we have $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get
 
-$$H = \frac{\partial h(q_t)}{\partial \delta \theta} = \frac{\partial }{\partial \delta \theta} \  (I + [\delta \theta]_\times)^T \ R(q)^T \ f_w \\ 
+$$H_\theta = \frac{\partial h(q_t)}{\partial \delta \theta} = \frac{\partial }{\partial \delta \theta} \  (I + [\delta \theta]_\times)^T \ R(q)^T \ f_w \\ 
 = \frac{\partial }{\partial \delta \theta} \ -[\delta \theta]_\times \ R(q)^T  \ f_w = [R(q)^T \ f_w]_\times \ \delta \theta \\
 = [R(q)^T [f_w]]_\times = [h(q)]_\times
 $$
+
+So that the final $H$ is 
+$$
+H = \begin{bmatrix}0 & 0 & H_\theta & 0 & 0\end{bmatrix}
+$$
+
+This means we should also compute $K$ and $P$ blockwise to save computation time.
 
 
 I also did some scaling of the covariance to the magnitude of $g$ to improve robustness
 
 ## Optical Flow Measurement Model
+
+The flow measurement is assumed to measure the velocity of a point $P$ on the ground relative to the sensor, projected into the sensor's frame of reference and only the $x$ and $y$ component is measured.
+
+The point $P$ is defined to be the intersection of the flow sensor's principal optical axis ($z$ axis, which is the same as the drone's downward facing $z$ axis) with the flat ground plane. The distance $\rho$ is measured by the range sensor and is the distance $OP$ from the sensor to point $P$, with $\rho = {}_Sz_P$ i.e it is the $z$ coordinate of the point in sensor coordinate frame.
 
 ### Frames and notation
 
@@ -305,4 +318,47 @@ $$
 So that now we can construct the entire Jacobian w.r.t the error state as: 
 
 $$\mathbf{H} = \begin{bmatrix} \mathbf{0}_{2\times3} & \mathbf{H}_v & \mathbf{H}_\theta & \mathbf{0}_{2\times3} & \mathbf{H}_{w_b}\end{bmatrix}
+$$
+
+## Range sensor measurement model 
+As stated above, the range sensor measures $\rho = OP$, with O being the sensor center and $P$ being the intersection of the sensor's $z$ axis ray with the flat ground. We now derive $\rho$ from the nominal state $p$ and $q$ of the drone.
+
+First, the coordinate of the sensor in world coordinate is
+
+$$
+{}_E r_{S} = {}_Er_G + {}_ER_B \ {}_Br_{GS} = p + {}_ER_B \ {}_Br_{GS}
+$$
+
+We know that ${}_B{\rho} = \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix} = e_z \cdot \rho $ rotated into world frame and projected onto $z$ axis, plus the terrain height should give the negative z coordinate of $_E r_{S}$ (negative because our z points down). In math: 
+
+$$
+-e_z^T \ {}_E r_{S} =  e_z^T {}_ER_B \ e_z \cdot \rho + h_t
+$$
+
+Therefore inverting it we find the measurement
+
+$$
+h(x) = \rho = \frac{-e_z^T \ {}_E r_{S} - h_t}{e_z^T {}_ER_B \ e_z}
+$$
+
+That fancy denominator term is simply the entry at row 3, column 3 of the matrix ${}_ER_B$
+
+Now we pertube this measurement with $\delta p$ and $\delta \theta$: 
+
+$$
+h(x_t) = \frac{-e_z^T \ (p +  \delta p + ({}_ER_B \ (I + [\delta \theta]_\times ) \ {}_Br_{GS}) - h_t}{e_z^T {}_ER_B(I + [\delta \theta]_\times ) \ e_z}
+$$
+
+And take the derivative w.r.t $\delta p$ and $\delta \theta$. 
+
+For $\delta p$, this is easy: 
+
+$$
+H_p = \frac{\partial h(x_t)}{\partial \delta p} = \frac{-e_z^T }{e_z^T {}_ER_B \ e_z}
+$$
+
+For $\delta \theta$ the math is a bit disgusting, but basically we use the quotient rule to find
+
+$$
+H_\theta = \frac{e_z^T \ {}_ER_B [{}_Br_{GS} + e_z \rho]_\times}{e_z^T {}_ER_B \ e_z}
 $$

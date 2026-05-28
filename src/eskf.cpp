@@ -101,9 +101,8 @@ void ESKF::propagate(const ImuData &imudata)
     nominal.v = nominal.v + a_world * dt;
     nominal.q = normalize(nominal.q * qexp(gyro_u * dt));
 
-
-    // This mess is doint P = FPF^T + Qx, but optimized for the fact that 
-    // F is mostly zeroes and I 
+    // This mess is doint P = FPF^T + Qx, but optimized for the fact that
+    // F is mostly zeroes and I
     const BLA::Eye<3, 3> I3 = BLA::Eye<3, 3>();
 
     const BLA::Matrix<3, 3> Ra_udt =
@@ -174,10 +173,10 @@ void ESKF::propagate(const ImuData &imudata)
     // Add Qx. No need to construct full Qx.
     // -----------------------------------------------------------------------------
 
-    const float q_v = sigma_an * sigma_an * dt2;
-    const float q_th = sigma_wn * sigma_wn * dt2;
+    const float q_v = sigma_an_mps2 * sigma_an_mps2 * dt2;
+    const float q_th = sigma_wn_radps * sigma_wn_radps * dt2;
     const float q_ab = sigma_aw * sigma_aw * dt;
-    const float q_wb = sigma_ww * sigma_ww * dt;
+    const float q_wb = sigma_ww_radps * sigma_ww_radps * dt;
 
     // velocity block, indices 3..5
     Pnew(3, 3) += q_v;
@@ -306,11 +305,21 @@ void ESKF::correct_gravity(const Vec3 &accel)
     inject(e);
 }
 
-void ESKF::correct_flow(const MTF02Data &flowdata)
+void ESKF::correct_flow_and_range(const MTF02Data &flowdata){
+    const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
+    if (closest_buf == nullptr)
+    {
+        return;
+    }
+    correct_flow(flowdata, closest_buf);
+    correct_range(flowdata, closest_buf);
+}
+
+void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer* closest_buf)
 {
     // Refer to the flow observation in the docs
 
-    const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
+    //const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
 
     if (closest_buf == nullptr)
     {
@@ -328,7 +337,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
         return;
     }
 
-    if (rho < 0.03f || rho > 5.0f)
+    if (rho < 0.01f || rho > 5.0f)
     {
         return;
     }
@@ -340,12 +349,12 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
     // static Vec3LPF v_body_delay = Vec3LPF(0.3);
 
     // const Vec3 gyro_lagged = gyro_delay.update(gyro);
-    // const Vec3 omega_B = gyro_lagged - nominal.wb;
+    // const Vec3 omegr_GP = gyro_lagged - nominal.wb;
 
     NominalState state = closest_buf->state;
     const Vec3 v_G_B = state.q.T() * state.v * state.q;
 
-    const Vec3 omega_B = closest_buf->imudata.gyro - state.wb;
+    const Vec3 omegr_GP = closest_buf->imudata.gyro - state.wb;
 
     // Earth -> body rotation.
     BLA::Matrix<3, 3> R_EB = quatToRotMat(state.q); // body -> earth
@@ -361,7 +370,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
 
     // Predicted raw optical flow angular rate.
     const Vec3 pred_3d =
-        (v_G_B * -1.0f - cross(omega_B, r_B)) * (1.0f / rho);
+        (v_G_B * -1.0f - cross(omegr_GP, r_B)) * (1.0f / rho);
 
     // Flow sensor might be mounted backwards. negative here if needed
     constexpr float FLOW_SIGN_X = -1.0f;
@@ -400,11 +409,11 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
     // Measurement noise
     // angular-rate noise in rad/s
 
-    float sigma_x = flow_sigma_radps / trust_x;
-    float sigma_y = flow_sigma_radps / trust_y;
+    float sigma_x = sigma_flow_radps / trust_x;
+    float sigma_y = sigma_flow_radps / trust_y;
 
-    sigma_x = constrain(sigma_x, flow_sigma_radps, 2.5f);
-    sigma_y = constrain(sigma_y, flow_sigma_radps, 2.5f);
+    sigma_x = constrain(sigma_x, sigma_flow_radps, 2.5f);
+    sigma_y = constrain(sigma_y, sigma_flow_radps, 2.5f);
 
     BLA::Matrix<2, 2> V;
     V.Fill(0.0f);
@@ -494,6 +503,158 @@ void ESKF::correct_flow(const MTF02Data &flowdata)
 
     // e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
     // e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
+
+    inject(e);
+}
+
+void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer* closest_buf)
+{
+    //const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
+
+    if (closest_buf == nullptr)
+    {
+        return;
+    }
+
+    const float rho = flowdata.data.dist_mm * 1e-3f;
+
+    if (rho < 0.01f || rho > 5.0f)
+    {
+        return;
+    }
+
+    const NominalState state = closest_buf->state;
+    BLA::Matrix<3, 3> R_EB = quatToRotMat(state.q); // body -> earth
+
+    const Vec3 e_z{0.0f, 0.0f, 1.0f};
+    const Vec3 _Br_GS = R_G_TO_FLOW;
+
+    Vec3 Rz{
+        R_EB(2, 0),
+        R_EB(2, 1),
+        R_EB(2, 2)};
+
+    float R_22 = R_EB(2, 2);
+
+    if (R_22 < 0.7f)
+    {
+        return; // too tilted
+    }
+
+    float _Er_S = state.p.z + dot(Rz, _Br_GS);
+
+    float rho_pred = (-h_terrain - _Er_S) / R_22;
+
+    float Hpz = -1.0f / R_22;
+
+    Vec3 a_B = _Br_GS + e_z * rho_pred;
+
+    BLA::Matrix<1, 3> Htheta = {
+        (Rz.y * a_B.z - Rz.z * a_B.y) / R_22,
+        (Rz.z * a_B.x - Rz.x * a_B.z) / R_22,
+        (Rz.x * a_B.y - Rz.y * a_B.x) / R_22};
+
+    BLA::Matrix<1, 3> Hp = {
+        0, 0,
+        -1 / R_22};
+
+    BLA::Matrix<1, 1> y = {
+        rho - rho_pred};
+
+    constexpr float TERRAIN_JUMP_GATE_M = 0.10f; // tune 0.10-0.20 m
+    
+    // if the height suddenly jumps compared to prediction, we 
+    // probly flew over a terrain bump like a table
+    // then we just update h_terrain
+    if (fabsf(rho - rho_pred) > TERRAIN_JUMP_GATE_M)
+    {
+        h_terrain = -_Er_S - rho * R_22;
+        return;
+    }
+
+    BLA::Matrix<1, 1> V = {
+        sigma_range_m * sigma_range_m};
+
+    // Kalman update.
+    // H = [Hp 0 Htheta 0 0], optimized to only multiply non zero blocks
+    // This mess is just S = HPH^T + V
+
+    BLA::Matrix<15, 1> PHt;
+    PHt.Fill(0.0f);
+
+    PHt += P.Submatrix<15, 3>(0, 0) * ~Hp;     // P[:,p] * Hp.T
+    PHt += P.Submatrix<15, 3>(0, 6) * ~Htheta; // P[:,theta] * Htheta.T
+
+    BLA::Matrix<1, 1> S = Hp * PHt.Submatrix<3, 1>(0, 0) + Htheta * PHt.Submatrix<3, 1>(6, 0) + V;
+
+    // 1D inverse
+    float S_inv = 1.0f / S(0, 0);
+
+    // Optional 1D NIS.
+    BLA::Matrix<1, 1> nis_m = ~y * S_inv * y;
+    float nis = nis_m(0);
+
+    constexpr float RANGE_NIS_GATE = 10.8f; // 99.9% for 1D-ish
+
+    if (nis > RANGE_NIS_GATE)
+    {
+        // Soft reject: inflate measurement noise instead of hard-rejecting.
+        float scale = constrain(nis / RANGE_NIS_GATE, 1.0f, 25.0f);
+
+        // Replace old V contribution with inflated V contribution.
+        S -= V;
+
+        V(0, 0) *= scale;
+
+        S += V;
+
+        // Recompute inverse after soft rejection.
+        S_inv = 1.0f / S(0, 0);
+    }
+
+    BLA::Matrix<15, 1> K = PHt * S_inv;
+
+    BLA::Matrix<15, 1> dx = K * y;
+
+    // Optimized for sparse H. This mess is only doing:
+    // P = (I-KH) P (I-KH)^T + KVK^T
+    //
+    // Expanded:
+    // P = P - KHP - KHP^T + KSK^T
+    BLA::Matrix<15, 15> KHP;
+    KHP.Fill(0.0f);
+
+    KHP += K * Hp * P.Submatrix<3, 15>(0, 0);
+    KHP += K * Htheta * P.Submatrix<3, 15>(6, 0);
+
+    P = P - KHP - ~KHP + K * S * ~K;
+    P = (P + ~P) * 0.5f;
+
+    ErrorState e = unpack_error(dx);
+
+    // Safety clamps for dp, dvz and dtheta
+    constexpr float MAX_DPZ_CORR = 0.10f; // m per update
+    if (fabsf(e.dp.z) > MAX_DPZ_CORR)
+    {
+        e.dp.z = constrain(e.dp.z, -MAX_DPZ_CORR, MAX_DPZ_CORR);
+    }
+
+    constexpr float MAX_DVZ_CORR = 0.20f; // m/s per update
+    if (fabsf(e.dv.z) > MAX_DVZ_CORR)
+    {
+        e.dv.z = constrain(e.dv.z, -MAX_DVZ_CORR, MAX_DVZ_CORR);
+    }
+
+    constexpr float MAX_DTHETA_CORR = 1.0f * DEG_TO_RAD;
+    float dtheta_norm = sqrtf(dot(e.dtheta, e.dtheta));
+    if (dtheta_norm > MAX_DTHETA_CORR)
+    {
+        e.dtheta *= MAX_DTHETA_CORR / dtheta_norm;
+    }
+
+    // Optional: kill effect on accel and gyro bias
+    e.dab = Vec3{0.0f, 0.0f, 0.0f};
+    e.dwb = Vec3{0.0f, 0.0f, 0.0f};
 
     inject(e);
 }
