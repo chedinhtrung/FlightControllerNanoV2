@@ -29,16 +29,25 @@ void StateMachine::update(const PPMCommand &cmd, const NominalState &state, floa
 
     // These thresholds are deliberately conservative.
     // ESKF z is positive down, so above takeoff point means p.z is negative.
-    constexpr float TAKEOFF_CLEAR_HEIGHT_M = 0.03f;
+    constexpr float TAKEOFF_ENTER_HEIGHT_M = 0.07f;
+    constexpr float TAKEOFF_EXIT_HEIGHT_M = 0.04f;
+    constexpr float TAKEOFF_THROTTLE_INTENT = 0.1f;
+    constexpr uint32_t TAKEOFF_CONFIRM_COUNT_NEEDED = 60; // ~240ms at 250Hz
     constexpr float LAND_STICK_LOW = 0.05f;
     constexpr float LAND_CANCEL_STICK = 0.10f;
     constexpr float LAND_VZ_STOPPED_MPS = 0.03f;
     constexpr uint32_t LAND_STOPPED_COUNT_NEEDED = 250;
 
     static uint32_t landed_counter = 0;
+    static uint32_t takeoff_counter = 0;
 
-    const bool height_cleared_ground =
-        -state.p.z - h_terrain > TAKEOFF_CLEAR_HEIGHT_M;
+    const float height_agl = -state.p.z - h_terrain;
+    const bool height_cleared_ground_enter =
+        height_agl > TAKEOFF_ENTER_HEIGHT_M;
+    const bool height_cleared_ground_exit =
+        height_agl > TAKEOFF_EXIT_HEIGHT_M;
+    const bool takeoff_throttle_intent =
+        cmd.C3 > TAKEOFF_THROTTLE_INTENT;
 
     const bool landing_requested =
         cmd.C3 < LAND_STICK_LOW;
@@ -56,31 +65,55 @@ void StateMachine::update(const PPMCommand &cmd, const NominalState &state, floa
         // In ARMED, throttle is manual until takeoff (ground clearance).
         flightstate = ARMED;
         landed_counter = 0;
+        takeoff_counter = 0;
         break;
 
     case ARMED:
-        if (height_cleared_ground)
+        if (takeoff_throttle_intent && height_cleared_ground_enter)
         {
-            flightstate = AIRBORNE;
-            landed_counter = 0;
+            if (takeoff_counter < TAKEOFF_CONFIRM_COUNT_NEEDED)
+            {
+                takeoff_counter++;
+            }
+
+            if (takeoff_counter >= TAKEOFF_CONFIRM_COUNT_NEEDED)
+            {
+                flightstate = AIRBORNE;
+                landed_counter = 0;
+                takeoff_counter = 0;
+            }
+        }
+        else
+        {
+            takeoff_counter = 0;
         }
         break;
 
     case TAKEOFF:
         // Not actively used
-        if (height_cleared_ground)
+        if (height_cleared_ground_enter)
         {
             flightstate = AIRBORNE;
             landed_counter = 0;
+            takeoff_counter = 0;
         }
         break;
 
     case AIRBORNE:
+        if (!height_cleared_ground_exit)
+        {
+            flightstate = ARMED;
+            landed_counter = 0;
+            takeoff_counter = 0;
+            break;
+        }
+
         // In VXYZ, low throttle stick means request controlled landing.
         if (flightmode == VXYZ && landing_requested)
         {
             flightstate = LANDING;
             landed_counter = 0;
+            takeoff_counter = 0;
         }
         break;
 
@@ -90,6 +123,7 @@ void StateMachine::update(const PPMCommand &cmd, const NominalState &state, floa
         {
             flightstate = AIRBORNE;
             landed_counter = 0;
+            takeoff_counter = 0;
             break;
         }
 
@@ -106,6 +140,7 @@ void StateMachine::update(const PPMCommand &cmd, const NominalState &state, floa
             {
                 flightstate = ARMED;
                 landed_counter = 0;
+                takeoff_counter = 0;
             }
         }
         else

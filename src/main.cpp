@@ -204,13 +204,12 @@ void loop()
 
   if (use_manual_throttle)
   {
-    Serial.println("Manual Throttle ");
-    //throttle = rpy_cmd.C3;
+    throttle = rpy_cmd.C3;
+    debug::log(throttle, "Manual");
   }
   else
   {
     // ESKF v.z is positive down.
-    Serial.println("Auto throttle");
     constexpr float MAX_CLIMB_MPS = 0.50f;
     constexpr float MAX_DESCEND_MPS = 0.35f;
     constexpr float HOVER_THRUST = 0.47f;
@@ -223,11 +222,12 @@ void loop()
 
     throttle = HOVER_THRUST - thrust_adjust;
     throttle = constrain(throttle, 0.0f, 1.0f);
+    debug::log(throttle, "Auto");
   }
 
   if (motors_allowed && throttle > 0.1f && throttle <= 1.0f)
   {
-    debug::log(throttle);
+    //debug::log(throttle);
     motor_device.write(throttle, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
   }
   else
