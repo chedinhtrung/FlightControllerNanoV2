@@ -206,13 +206,13 @@ public:
 class VzStabilizer
 {
 private:
-    PID vz_pid = PID(0.5, 0.07f, 0.015f, 0.05f, 0.1f);
+    PID vz_pid = PID(0.55, 0.05f, 0.015f, 0.1f, 0.1f);
 
 public:
     inline float thrust_adjust_from_vz_error(float vz_error)
     {
         float adj = vz_pid.calculate(vz_error);
-        adj = constrain(adj, -0.2, 0.2);
+        adj = constrain(adj, -0.3, 0.3);
         return adj;
     }
     inline void reset(){vz_pid.reset();}

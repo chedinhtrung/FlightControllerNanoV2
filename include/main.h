@@ -59,7 +59,7 @@ inline void reset_flight_controllers()
 
 inline void update_optical_flow(int time_buffer_us)
 {
-    // update EKSF 
+    // update EKSF
     // Low priority parse window: consume bytes while data is pending and loop time remains.
     while (optical_flow.has_bytes() && (micros() - last_active) < (PERIOD_US - time_buffer_us))
     {
@@ -81,17 +81,12 @@ inline void update_baro()
     if (barometer.read(baro_data))
     {
         eskf.correct_baro(baro_data.altitude_m);
-        //debug::plot(eskf.nominal.v);
+        // debug::plot(eskf.nominal.v);
     }
 }
 
 inline EulerAngle compute_angle_target_from_cmd(const PPMCommand &rpy_cmd, const PPMCommand &vxy_cmd)
 {
-
-    Vec3 command_target{
-        vxy_cmd.C2,
-        vxy_cmd.C4,
-        vxy_cmd.C1};
 
     EulerAngle angle_target_vel;
 
@@ -100,21 +95,26 @@ inline EulerAngle compute_angle_target_from_cmd(const PPMCommand &rpy_cmd, const
     EulerAngle e = quaternionToEuler(eskf.nominal.q);
     float cy = cosf(e.yaw);
     float sy = sinf(e.yaw);
-    
+
     // convert to v1 frame for control
     Vec3 v_v1{
         cy * v_world.x + sy * v_world.y,
         -sy * v_world.x + cy * v_world.y,
         v_world.z};
 
-    angle_target_vel = vxy_stabilizer.vxy_error_to_angle_target(command_target - v_v1, command_target.z);
+    Vec3 vxy_error{
+        vxy_cmd.C2 - v_v1.x,
+        vxy_cmd.C4 - v_v1.y,
+        0.0f};
+
+    angle_target_vel = vxy_stabilizer.vxy_error_to_angle_target(vxy_error, vxy_cmd.C1);
 
     EulerAngle angle_target_stick{
         rpy_cmd.C1 * 0.5f,
         rpy_cmd.C2 * 0.5f,
         rpy_cmd.C4};
 
-    float authority = vxy_stabilizer.velHoldAuthorityFromHeight(mtf02_data.data.dist_mm * 1e-3);
+    float authority = vxy_stabilizer.velHoldAuthorityFromHeight(-eskf.nominal.p.z - eskf.h_terrain);
 
     EulerAngle angle_target;
     angle_target.yaw = angle_target_vel.yaw;

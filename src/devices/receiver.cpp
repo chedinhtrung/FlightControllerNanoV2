@@ -68,10 +68,10 @@ PPMCommand Receiver::to_vxyz_mode(const PPMCommand& cmd) const {
     out.C4 = (cmd.C4 - 1500.0f) / 1000.0f * 1.8;
     out.C1 = (cmd.C1 - 1500.0f) / 1000.0f * 70;  // map 1000 - 2000 to range -35 -> 35
 
-    out.C3 = -(cmd.C3 - 1500.0f) / 1000.0f; // map 1000 - 2000 to range -0.5m/s -> 0.5m/s. Negative sign due to up = negative z
+    out.C3 = -(cmd.C3 - 1500.0f) / 1000.0f *2; // map 1000 - 2000 to range -0.5m/s -> 0.5m/s. Negative sign due to up = negative z
 
-    // vz in -0.5m/s - 0.5m/s
-    out.C3 = constrain(out.C3, -0.5f, 0.5f);
+    // vz in -0.8m/s - 0.8m/s
+    out.C3 = constrain(out.C3, -1.0f, 1.0f);
 
     // vx
     out.C2 = constrain(out.C2, -0.9f, 0.9f);

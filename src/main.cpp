@@ -114,74 +114,52 @@ void loop()
   PPMCommand rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
   PPMCommand vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
 
+  //debug::log(vxyz_cmd);
+
   // state machine uses rpy cmd for thrust 0-1
   statemachine.update(rpy_cmd, eskf.nominal, eskf.h_terrain);
 
   FlightState flightstate = statemachine.get_flightstate();
   FlightMode flightmode = statemachine.get_flightmode();
 
-  EulerAngle angle_target{};
+  const bool motors_allowed =
+      flightstate != DISARMED;
 
-  bool motors_allowed = true;
-  bool use_manual_throttle = true;
-  bool use_vz_control = false;
-  bool allow_ground_reset = false;
+  const bool ground_state =
+      flightstate == DISARMED ||
+      flightstate == ARMED;
 
-  switch (flightstate)
-  {
-  case DISARMED:
-    motors_allowed = false;
-    use_manual_throttle = true;
-    use_vz_control = false;
-    allow_ground_reset = true;
-    break;
+  const bool manual_attitude =
+      flightmode == ANGLE ||
+      flightstate == DISARMED ||
+      flightstate == ARMED ||
+      flightstate == TAKEOFF;
 
-  case ARMED:
-    motors_allowed = true;
-    use_manual_throttle = true;
-    use_vz_control = false;
-    allow_ground_reset = false;
-    break;
+  const bool manual_throttle =
+      flightstate == DISARMED ||
+      flightstate == ARMED ||
+      flightstate == TAKEOFF ||
+      flightmode != VXYZ;
 
-  case TAKEOFF:
-    motors_allowed = true;
-    use_manual_throttle = true; // first version: still manual takeoff
-    use_vz_control = false;
-    allow_ground_reset = false;
-    break;
+  const bool use_vz_control =
+      motors_allowed &&
+      !manual_throttle;
 
-  case AIRBORNE:
-    motors_allowed = true;
-    allow_ground_reset = false;
-
-    if (flightmode == VXYZ)
-    {
-      use_manual_throttle = false;
-      use_vz_control = true;
-    }
-    else
-    {
-      use_manual_throttle = true;
-      use_vz_control = false;
-    }
-    break;
-
-  case LANDING:
-    motors_allowed = true;
-    use_manual_throttle = false;
-    use_vz_control = true;
-    allow_ground_reset = false;
-    break;
-  }
-
-  if (allow_ground_reset)
+  // Ground handling.
+  // Only the state machine decides when this is allowed.
+  if (ground_state)
   {
     eskf.reset_zero_vxy(0.01f);
-    eskf.reset_baro_offset(baro_data.altitude_m);
     reset_flight_controllers();
   }
 
-  if (flightmode == ANGLE || flightstate == DISARMED || flightstate == ARMED || flightstate == TAKEOFF)
+  if (flightstate == DISARMED){
+    eskf.reset_baro_offset(baro_data.altitude_m);
+  }
+
+  EulerAngle angle_target{};
+
+  if (manual_attitude)
   {
     angle_target = EulerAngle{
         rpy_cmd.C1,
@@ -202,37 +180,43 @@ void loop()
 
   float throttle = 0.0f;
 
-  if (use_manual_throttle)
+  if (manual_throttle)
   {
     throttle = rpy_cmd.C3;
-    debug::log(throttle, "Manual");
   }
   else
   {
     // ESKF v.z is positive down.
-    constexpr float MAX_CLIMB_MPS = 0.50f;
-    constexpr float MAX_DESCEND_MPS = 0.35f;
     constexpr float HOVER_THRUST = 0.47f;
 
     float vz_cmd_down = vxyz_cmd.C3;
-  
+
+    if (flightstate == LANDING)
+    {
+      // Controlled descent near ground.
+      // Positive down velocity means descending.
+      vz_cmd_down = 0.45f;
+    }
+
     float vz_error = vz_cmd_down - eskf.nominal.v.z;
 
     float thrust_adjust = vz_stabilizer.thrust_adjust_from_vz_error(vz_error);
 
+    // Mind the sign: + caused fly away.
     throttle = HOVER_THRUST - thrust_adjust;
     throttle = constrain(throttle, 0.0f, 1.0f);
+
     debug::log(throttle, "Auto");
   }
 
   if (motors_allowed && throttle > 0.1f && throttle <= 1.0f)
   {
-    //debug::log(throttle);
+    // debug::log(throttle);
     motor_device.write(throttle, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
   }
   else
   {
-    //debug::log(throttle);
+    // debug::log(throttle);
     motor.set_motor(MotorCommand{0.0f, 0.0f, 0.0f, 0.0f});
     reset_flight_controllers();
   }
@@ -252,6 +236,7 @@ void loop()
   // debug::plot(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
 
-  while (micros() - last_active < PERIOD_US){}
-  
+  while (micros() - last_active < PERIOD_US)
+  {
+  }
 }

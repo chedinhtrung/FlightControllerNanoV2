@@ -1,56 +1,41 @@
 #include "statemachine.h"
 
-void StateMachine::update(const PPMCommand &cmd, const NominalState &state, float h_terrain)
+void StateMachine::update(const PPMCommand &cmd,
+                          const NominalState &state,
+                          float h_terrain)
 {
     // Hard disarm / motor lock.
-    // Since C3 is normalized throttle/stick, near-zero means motors are not allowed.
+    // Your normal lowest stick is around 0.04, while the disarm switch forces 0.
     if (cmd.C3 < 0.005f)
     {
         flightstate = DISARMED;
         return;
     }
 
-    /*
-    // Decode flight mode from a 3-position switch.
-    // TODO: flightmode switch channel
-    if (cmd.C6 < -0.33f)
-    {
-        flightmode = ANGLE;
-    }
-    else if (cmd.C6 < 0.33f)
-    {
-        flightmode = VXY;
-    }
-    else
-    {
-        flightmode = VXYZ;
-    }
-    */
+    // TODO: Decode flight mode from switch later.
+    // For now keep whatever flightmode was already set, default VXYZ.
 
-    // These thresholds are deliberately conservative.
-    // ESKF z is positive down, so above takeoff point means p.z is negative.
-    constexpr float TAKEOFF_ENTER_HEIGHT_M = 0.07f;
-    constexpr float TAKEOFF_EXIT_HEIGHT_M = 0.04f;
-    constexpr float TAKEOFF_THROTTLE_INTENT = 0.1f;
-    constexpr uint32_t TAKEOFF_CONFIRM_COUNT_NEEDED = 60; // ~240ms at 250Hz
-    constexpr float LAND_STICK_LOW = 0.05f;
+    constexpr float TAKEOFF_HEIGHT_AGL_M = 0.04f;
+    constexpr float TAKEOFF_THROTTLE_INTENT = 0.30f;
+
+    constexpr float LAND_HEIGHT_AGL_M = 0.10f;
+    constexpr float LAND_STICK_LOW = 0.10f;
     constexpr float LAND_CANCEL_STICK = 0.10f;
-    constexpr float LAND_VZ_STOPPED_MPS = 0.03f;
-    constexpr uint32_t LAND_STOPPED_COUNT_NEEDED = 250;
+
+    constexpr float LAND_VZ_STOPPED_MPS = 0.05f;
+    constexpr uint32_t LAND_STOPPED_COUNT_NEEDED = 10;
 
     static uint32_t landed_counter = 0;
-    static uint32_t takeoff_counter = 0;
 
     const float height_agl = -state.p.z - h_terrain;
-    const bool height_cleared_ground_enter =
-        height_agl > TAKEOFF_ENTER_HEIGHT_M;
-    const bool height_cleared_ground_exit =
-        height_agl > TAKEOFF_EXIT_HEIGHT_M;
-    const bool takeoff_throttle_intent =
+
+    const bool takeoff_detected =
+        height_agl > TAKEOFF_HEIGHT_AGL_M &&
         cmd.C3 > TAKEOFF_THROTTLE_INTENT;
 
     const bool landing_requested =
-        cmd.C3 < LAND_STICK_LOW;
+        cmd.C3 < LAND_STICK_LOW &&
+        height_agl < LAND_HEIGHT_AGL_M;
 
     const bool landing_cancel_requested =
         cmd.C3 > LAND_CANCEL_STICK;
@@ -61,75 +46,48 @@ void StateMachine::update(const PPMCommand &cmd, const NominalState &state, floa
     switch (flightstate)
     {
     case DISARMED:
-        // We already know C3 is not near zero, so arm.
-        // In ARMED, throttle is manual until takeoff (ground clearance).
+        // C3 is no longer zero, so motors are allowed.
+        // Stay manual throttle until takeoff is detected.
         flightstate = ARMED;
         landed_counter = 0;
-        takeoff_counter = 0;
         break;
 
     case ARMED:
-        if (takeoff_throttle_intent && height_cleared_ground_enter)
+        if (takeoff_detected)
         {
-            if (takeoff_counter < TAKEOFF_CONFIRM_COUNT_NEEDED)
-            {
-                takeoff_counter++;
-            }
-
-            if (takeoff_counter >= TAKEOFF_CONFIRM_COUNT_NEEDED)
-            {
-                flightstate = AIRBORNE;
-                landed_counter = 0;
-                takeoff_counter = 0;
-            }
-        }
-        else
-        {
-            takeoff_counter = 0;
+            flightstate = AIRBORNE;
+            landed_counter = 0;
         }
         break;
 
     case TAKEOFF:
-        // Not actively used
-        if (height_cleared_ground_enter)
-        {
-            flightstate = AIRBORNE;
-            landed_counter = 0;
-            takeoff_counter = 0;
-        }
+        // Not used in this simplified version.
+        flightstate = AIRBORNE;
+        landed_counter = 0;
         break;
 
     case AIRBORNE:
-        if (!height_cleared_ground_exit)
-        {
-            flightstate = ARMED;
-            landed_counter = 0;
-            takeoff_counter = 0;
-            break;
-        }
-
-        // In VXYZ, low throttle stick means request controlled landing.
+        // Do NOT return to ARMED just because height estimate/range changes.
+        // Only enter LANDING by explicit low-stick intent near ground.
         if (flightmode == VXYZ && landing_requested)
         {
             flightstate = LANDING;
             landed_counter = 0;
-            takeoff_counter = 0;
         }
         break;
 
     case LANDING:
-        // Raising stick cancels landing and returns to normal airborne VZ control.
+        // Raising stick above 0.1 cancels landing and returns to airborne.
         if (landing_cancel_requested)
         {
             flightstate = AIRBORNE;
             landed_counter = 0;
-            takeoff_counter = 0;
             break;
         }
 
-        // If we keep asking to go down but vertical speed has stopped,
-        // assume touchdown after debounce.
-        if (landing_requested && vz_stopped)
+        // If low stick persists and vertical speed is stopped,
+        // declare landed after 10 iterations.
+        if (cmd.C3 < LAND_STICK_LOW && vz_stopped)
         {
             if (landed_counter < LAND_STOPPED_COUNT_NEEDED)
             {
@@ -140,7 +98,6 @@ void StateMachine::update(const PPMCommand &cmd, const NominalState &state, floa
             {
                 flightstate = ARMED;
                 landed_counter = 0;
-                takeoff_counter = 0;
             }
         }
         else

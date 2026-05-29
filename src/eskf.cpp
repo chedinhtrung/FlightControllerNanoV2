@@ -125,10 +125,6 @@ void ESKF::propagate(const ImuData &imudata)
     nominal.v = nominal.v + a_world * dt;
     nominal.q = normalize(nominal.q * qexp(gyro_u * dt));
 
-    nominal.p = nominal.p + nominal.v * dt + a_world * dt * dt * 0.5f;
-    nominal.v = nominal.v + a_world * dt;
-    nominal.q = normalize(nominal.q * qexp(gyro_u * dt));
-
     // This mess is doint P = FPF^T + Qx, but optimized for the fact that
     // F is mostly zeroes and I
     const BLA::Eye<3, 3> I3 = BLA::Eye<3, 3>();
@@ -590,7 +586,7 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer *closest_b
     BLA::Matrix<1, 1> y = {
         rho - rho_pred};
 
-    constexpr float TERRAIN_JUMP_GATE_M = 0.10f; // tune 0.10-0.20 m
+    constexpr float TERRAIN_JUMP_GATE_M = 0.15f; // tune 0.10-0.20 m
 
     // if the height suddenly jumps compared to prediction, we
     // probly flew over a terrain bump like a table
