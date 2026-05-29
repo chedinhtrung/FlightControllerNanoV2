@@ -18,12 +18,11 @@
 #include "pid.h"
 
 #include "eskf.h"
+#include "statemachine.h"
 
 extern MPU9250 imu;
 extern Imu imu_device;
 extern ImuData imu_data;
-
-extern Madgwick madgw;
 
 extern PPMReceiver ppm_receiver;
 extern Receiver receiver;
@@ -45,12 +44,17 @@ extern ESKF eskf;
 extern unsigned long last_active;
 
 extern AttiStabilizer atti_stabilizer;
-extern VelStabilizer vel_stabilizer;
+extern VelStabilizer vxy_stabilizer;
+
+extern VzStabilizer vz_stabilizer;
+
+extern StateMachine statemachine;
 
 inline void reset_flight_controllers()
 {
     atti_stabilizer.reset();
-    vel_stabilizer.reset();
+    vxy_stabilizer.reset();
+    vz_stabilizer.reset();
 }
 
 inline void update_optical_flow(int time_buffer_us)
@@ -77,6 +81,7 @@ inline void update_baro()
     if (barometer.read(baro_data))
     {
         eskf.correct_baro(baro_data.altitude_m);
+        //debug::plot(eskf.nominal.v);
     }
 }
 
@@ -102,14 +107,14 @@ inline EulerAngle compute_angle_target_from_cmd(const PPMCommand &rpy_cmd, const
         -sy * v_world.x + cy * v_world.y,
         v_world.z};
 
-    angle_target_vel = vel_stabilizer.vxy_error_to_angle_target(command_target - v_v1, command_target.z);
+    angle_target_vel = vxy_stabilizer.vxy_error_to_angle_target(command_target - v_v1, command_target.z);
 
     EulerAngle angle_target_stick{
         rpy_cmd.C1 * 0.5f,
         rpy_cmd.C2 * 0.5f,
         rpy_cmd.C4};
 
-    float authority = vel_stabilizer.velHoldAuthorityFromHeight(mtf02_data.data.dist_mm * 1e-3);
+    float authority = vxy_stabilizer.velHoldAuthorityFromHeight(mtf02_data.data.dist_mm * 1e-3);
 
     EulerAngle angle_target;
     angle_target.yaw = angle_target_vel.yaw;

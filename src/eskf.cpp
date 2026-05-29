@@ -97,6 +97,34 @@ void ESKF::propagate(const ImuData &imudata)
 
     Vec3 a_world = q * accel_u * q.T() + GRAVITY_EARTH;
 
+    float accel_q_scale = 1.0f;
+
+    // Basic IMU sanity gate on raw accel norm in g.
+    const float accel_norm_g = sqrtf(dot(imudata.accel, imudata.accel));
+
+    bool accel_bad =
+        accel_norm_g < 0.1f ||
+        accel_norm_g > 5.0f;
+
+    // Clamp net world acceleration used for nominal integration.
+    constexpr float MAX_PROP_ACCEL_MPS2 = 25.0f;
+    float a_world_norm = sqrtf(dot(a_world, a_world));
+
+    if (accel_bad || a_world_norm > MAX_PROP_ACCEL_MPS2)
+    {
+        if (a_world_norm > MAX_PROP_ACCEL_MPS2)
+        {
+            a_world *= MAX_PROP_ACCEL_MPS2 / a_world_norm;
+        }
+
+        // This sample was suspicious. Let measurements correct more easily later.
+        accel_q_scale = 25.0f; // 5x sigma equivalent
+    }
+
+    nominal.p = nominal.p + nominal.v * dt + a_world * dt * dt * 0.5f;
+    nominal.v = nominal.v + a_world * dt;
+    nominal.q = normalize(nominal.q * qexp(gyro_u * dt));
+
     nominal.p = nominal.p + nominal.v * dt + a_world * dt * dt * 0.5f;
     nominal.v = nominal.v + a_world * dt;
     nominal.q = normalize(nominal.q * qexp(gyro_u * dt));
@@ -173,7 +201,7 @@ void ESKF::propagate(const ImuData &imudata)
     // Add Qx. No need to construct full Qx.
     // -----------------------------------------------------------------------------
 
-    const float q_v = sigma_an_mps2 * sigma_an_mps2 * dt2;
+    const float q_v = sigma_an_mps2 * sigma_an_mps2 * accel_q_scale * dt2;
     const float q_th = sigma_wn_radps * sigma_wn_radps * dt2;
     const float q_ab = sigma_aw * sigma_aw * dt;
     const float q_wb = sigma_ww_radps * sigma_ww_radps * dt;
@@ -710,7 +738,7 @@ void ESKF::correct_baro(float baro_alt_m, float trust)
         return;
     }
 
-    //debug::plot(Vec3{z, h, nominal.v.z});
+    // debug::plot(Vec3{z, h, nominal.v.z});
 
     BLA::Matrix<1, 1> y = {residual};
 
@@ -776,7 +804,7 @@ void ESKF::correct_baro(float baro_alt_m, float trust)
     inject(e);
 }
 
-void ESKF::reset_zero_velocity(float sigma_mps)
+void ESKF::reset_zero_vxy(float sigma_mps)
 {
 
     // used to zero velocity and avoid drift when no update is available

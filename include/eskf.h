@@ -93,7 +93,7 @@ public:
     void ESKF::correct_flow_and_range(const MTF02Data &flowdata);
     void ESKF::correct_baro(float baro_alt_m, float trust=1.0f);
 
-    void reset_zero_velocity(float sigma_mps = 0.03f);
+    void reset_zero_vxy(float sigma_mps = 0.03f);
     void reset_baro_offset(float baro_alt_m);
 
     void inject(const ErrorState &e);

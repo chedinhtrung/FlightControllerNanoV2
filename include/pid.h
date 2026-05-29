@@ -173,9 +173,9 @@ public:
 
         // Blend factor: 0 = low-error PID, 1 = high-error PID
         float tx = constrain(fabsf(v_error.x) / SWITCH_VEL, 0.0f, 1.0f);
-        tx = tx * tx * (3 - 2*tx);
+        tx = tx * tx * (3 - 2 * tx);
         float ty = constrain(fabsf(v_error.y) / SWITCH_VEL, 0.0f, 1.0f);
-        ty = ty * ty * (3 - 2*ty);
+        ty = ty * ty * (3 - 2 * ty);
 
         float pitch_l1 = vx_pid_l1.calculate(v_error.x);
         float pitch_l2 = vx_pid_l2.calculate(v_error.x);
@@ -203,14 +203,19 @@ public:
     void reset();
 };
 
-class VzStabilizer {
-    PID vz_pid = PID(0.2, 0.04f, 0.015f, 0.05f, 0.1f);
+class VzStabilizer
+{
+private:
+    PID vz_pid = PID(0.5, 0.07f, 0.015f, 0.05f, 0.1f);
 
-    inline float thrust_adjust_from_vz_error(float vz_error){
+public:
+    inline float thrust_adjust_from_vz_error(float vz_error)
+    {
         float adj = vz_pid.calculate(vz_error);
         adj = constrain(adj, -0.2, 0.2);
         return adj;
     }
+    inline void reset(){vz_pid.reset();}
 };
 
 #endif
