@@ -100,7 +100,7 @@ void loop()
   
   //debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
 
-  /*
+  
   update_optical_flow(1000);
   update_baro();
 
@@ -121,8 +121,10 @@ void loop()
   bool receiver_ok = receiver.read(cmd_raw);
   if (!receiver_ok)
   {
-    // Placeholder: optional receiver read error handling.
+    Serial.println("receiver failure");
   }
+
+  //debug::log(cmd_raw);
 
   PPMCommand rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
   PPMCommand vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
@@ -160,8 +162,8 @@ void loop()
 
   if (flightstate == DISARMED)
   {
-    // eskf.reset_baro_offset(baro_data.altitude_m);
-    // eskf.reset_zero_vxy(0.01f);
+    eskf.reset_baro_offset(baro_data.altitude_m);
+    eskf.reset_zero_vxy(0.01f);
     reset_flight_controllers();
   }
 
@@ -218,12 +220,12 @@ void loop()
   if (motors_allowed && throttle > 0.1f && throttle <= 1.0f)
   {
     // debug::log(throttle);
-    // motor_device.write(throttle, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
+    motor_device.write(throttle, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
   }
   else
   {
     // debug::log(throttle);
-    // motor.set_motor(MotorCommand{0.0f, 0.0f, 0.0f, 0.0f});
+    motor.set_motor(MotorCommand{0.0f, 0.0f, 0.0f, 0.0f});
 
     motor_device.write(0.0f, 0.0f, 0.0f, 0.0f);
     reset_flight_controllers();
@@ -231,7 +233,7 @@ void loop()
 
   // debug::plot(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
-  */
+  
   while (micros() - last_active < PERIOD_US)
   {
   }

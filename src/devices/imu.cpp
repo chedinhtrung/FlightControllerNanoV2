@@ -73,7 +73,7 @@ bool Imu::read(ImuData &out) {
     // Output gyro in rad/s for the rest of the stack.
     out.gyro *= RAD_PER_DEG;
 
-    debug::log(out.gyro);
+    //debug::log(out.gyro);
 
     // Body-frame calibration.
     out.gyro -= gyro_bias_radps_;

@@ -35,8 +35,8 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.0008f, 1e-4f, 3e-7f, 0.15f, 0.12f);
-    PID x_rate_pid = PID(0.0009f, 1e-4f, 3e-7f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.00055f, 0.8e-4f, 3e-7f, 0.15f, 0.12f);
+    PID x_rate_pid = PID(0.00065f, 0.8e-4f, 3e-7f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
@@ -77,11 +77,11 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(45.0f, 1.5e-3f, 0.0f, 1.0f, 0.0f);
-    PID vy_pid_l1 = PID(45.0f, 1.5e-3f, 0.0f, 1.0f, 0.0f);
+    PID vx_pid_l1 = PID(40.0f, 1e-3f, 0.0f, 1.0f, 0.0f);
+    PID vy_pid_l1 = PID(40.0f, 1e-3f, 0.0f, 1.0f, 0.0f);
 
-    PID vx_pid_l2 = PID(35.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
-    PID vy_pid_l2 = PID(35.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
+    PID vx_pid_l2 = PID(30.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
+    PID vy_pid_l2 = PID(30.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
 
 public:
     inline float deadband_x(float x)
@@ -206,7 +206,7 @@ public:
 class VzStabilizer
 {
 private:
-    PID vz_pid = PID(0.45, 0.0f, 0.0f, 0.05f, 0.05f);
+    PID vz_pid = PID(0.30, 0.0f, 0.0f, 0.05f, 0.05f);
 
 public:
     inline float thrust_adjust_from_vz_error(float vz_error)
