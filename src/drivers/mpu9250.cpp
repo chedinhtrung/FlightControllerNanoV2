@@ -19,8 +19,6 @@ constexpr float ACCEL_LSB_PER_G   = 8192.0f;  // +-4 g
 constexpr float GYRO_DPS_PER_LSB  = 1.0f / GYRO_LSB_PER_DPS;
 constexpr float ACCEL_G_PER_LSB   = 1.0f / ACCEL_LSB_PER_G;
 
-const Vec3 ORIENTATION_SIGN = {IMU_MAP_X_SIGN, IMU_MAP_Y_SIGN, IMU_MAP_Z_SIGN};
-
 bool writeRegister(uint8_t reg, uint8_t value) {
     Wire.beginTransmission(IMUADDR);
     Wire.write(reg);
@@ -101,39 +99,7 @@ bool MPU9250::setup(){
     // Accel DLPF: A_DLPFCFG = 1 (~184 Hz), FCHOICE_B = 0.
     writeRegister(REG_ACCEL_CONFIG2, 0x02);
 
-    calibrate();
     return true;
-}
-
-void MPU9250::calibrate(){
-    gyro_bias = {};
-
-    constexpr int kSamples = 1000;
-    long sum_gx = 0;
-    long sum_gy = 0;
-    long sum_gz = 0;
-    int valid = 0;
-
-    for (int i = 0; i < kSamples; ++i) {
-        RawImuData sample{};
-        if (!readBurstRaw(sample.accel, sample.gyro)) {
-            continue;
-        }
-        sum_gx += sample.gyro.x;
-        sum_gy += sample.gyro.y;
-        sum_gz += sample.gyro.z;
-        ++valid;
-        delay(4);
-    }
-
-    if (valid == 0) {
-        return;
-    }
-
-    // Assume stationary during calibration: gyro should be 0 dps.
-    gyro_bias.x = (sum_gx / (float)valid) / GYRO_LSB_PER_DPS;
-    gyro_bias.y = (sum_gy / (float)valid) / GYRO_LSB_PER_DPS;
-    gyro_bias.z = (sum_gz / (float)valid) / GYRO_LSB_PER_DPS;
 }
 
 bool MPU9250::read(ImuData &data) {
@@ -142,40 +108,16 @@ bool MPU9250::read(ImuData &data) {
     }
     data.timestamp = micros();
 
-    Vec3 gyro_base = {
+    data.gyro = {
         raw.gyro.x * GYRO_DPS_PER_LSB,
         raw.gyro.y * GYRO_DPS_PER_LSB,
         raw.gyro.z * GYRO_DPS_PER_LSB
     };
 
-    Vec3 accel_base = {
+    data.accel = {
         raw.accel.x * ACCEL_G_PER_LSB,
         raw.accel.y * ACCEL_G_PER_LSB,
         raw.accel.z * ACCEL_G_PER_LSB
     };
-
-    gyro_base = (gyro_base - gyro_bias);
-    const float gyro_arr[3] = {gyro_base.x, gyro_base.y, gyro_base.z};
-    const float accel_arr[3] = {accel_base.x, accel_base.y, accel_base.z};
-
-    data.gyro = {
-        gyro_arr[IMU_MAP_X_SRC],
-        gyro_arr[IMU_MAP_Y_SRC],
-        gyro_arr[IMU_MAP_Z_SRC]
-    };
-    data.accel = {
-        accel_arr[IMU_MAP_X_SRC],
-        accel_arr[IMU_MAP_Y_SRC],
-        accel_arr[IMU_MAP_Z_SRC]
-    };
-
-    data.accel *= ORIENTATION_SIGN;
-    data.gyro *= ORIENTATION_SIGN;
-    data.gyro *= RAD_PER_DEG;  // Convert to radian
-
-    data.accel -= accel_bias_g;
-    data.accel *= accel_scale;
-
-    
     return true;
 }
