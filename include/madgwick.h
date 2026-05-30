@@ -2,7 +2,7 @@
 #define MADGWICK
 #include <Arduino.h>
 #include <datastructs.h>
-#include "drivers/mpu9250.h"
+#include "interfaces.h"
 #include "mathutils.h"
 
 #include "BasicLinearAlgebra.h"

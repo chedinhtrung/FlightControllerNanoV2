@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include <Wire.h>
 
 #include "debug.h"
 #include "devices/imu.h"
@@ -11,8 +10,8 @@
 #include "devices/receiver.h"
 #include "drivers/motors.h"
 #include "drivers/mtf02.h"
-#include "drivers/ms5611.h"
-#include "drivers/mpu9250.h"
+#include "drivers/ms5611_spi.h"
+#include "drivers/icm42688p.h"
 #include "drivers/receiver.h"
 #include "madgwick.h"
 #include "pid.h"
@@ -20,7 +19,7 @@
 #include "eskf.h"
 #include "statemachine.h"
 
-extern MPU9250 imu;
+extern ICM42688P imu;
 extern Imu imu_device;
 extern ImuData imu_data;
 
@@ -31,7 +30,7 @@ extern PPMCommand control_raw;
 extern Motor motor;
 extern MotorDevice motor_device;
 
-extern MS5611 baro;
+extern MS5611SPI baro;
 extern Barometer barometer;
 extern BaroData baro_data;
 

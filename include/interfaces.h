@@ -1,11 +1,32 @@
 #ifndef INTERFACES_H
 #define INTERFACES_H
 
-struct ImuData;
+#include <Arduino.h>
+#include "datastructs.h"
+
+struct RawImuData
+{
+    VectInt16 accel;
+    VectInt16 gyro;
+};
+
+struct ImuData
+{
+    Vec3 gyro;
+    Vec3 accel;
+    uint32_t timestamp;
+};
+
+struct BaroData {
+    float temp_c = 0.0f;
+    float pres_pa = 0.0f;
+    float altitude_m = 0.0f;
+    uint32_t timestamp;
+};
+
 struct MotorCommand;
 struct PPMCommand;
 struct RPICommand;
-struct BaroData;
 struct MTF02Data;
 
 class ImuDriver {

@@ -1,14 +1,13 @@
-#ifndef MS5611_H
-#define MS5611_H
+#ifndef MS5611_SPI_H
+#define MS5611_SPI_H
 
 #include <Arduino.h>
 #include "interfaces.h"
 
-constexpr uint32_t BARO_DELAY_US = 90000;
+constexpr uint8_t MS5611_SPI_CS_PIN = 10;
 
-class MS5611 : public BarometerDriver {
+class MS5611SPI : public BarometerDriver {
 public:
-    // Factory PROM calibration words C1..C6 are stored in prom[1]..prom[6].
     uint16_t prom[8] = {0};
     bool is_ready = false;
 

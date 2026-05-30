@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#include "drivers/ms5611.h"
+#include "drivers/ms5611_spi.h"
 #include "interfaces.h"
 #include "lpf.h"
 

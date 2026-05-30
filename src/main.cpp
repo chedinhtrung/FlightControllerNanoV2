@@ -1,6 +1,6 @@
 #include "main.h"
 
-MPU9250 imu;
+ICM42688P imu;
 Imu imu_device(imu);
 ImuData imu_data;
 
@@ -11,7 +11,7 @@ PPMCommand control_raw;
 Motor motor;
 MotorDevice motor_device(motor);
 
-MS5611 baro;
+MS5611SPI baro;
 Barometer barometer(baro);
 BaroData baro_data;
 
@@ -34,9 +34,6 @@ void setup()
 {
   Serial.begin(115200);
   delay(200);
-
-  Wire.begin();
-  Wire.setClock(400000);
 
   delay(5000);
   if (!imu_device.setup())
@@ -100,7 +97,10 @@ void loop()
 
   eskf.propagate(imu_data);
   eskf.correct_gravity(imu_data.accel);
+  
+  //debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
 
+  /*
   update_optical_flow(1000);
   update_baro();
 
@@ -115,7 +115,7 @@ void loop()
       -sy * v_world.x + cy * v_world.y,
       v_world.z};
 
-  debug::plot(v_v1);
+  //debug::plot(v_v1);
 
   PPMCommand cmd_raw{};
   bool receiver_ok = receiver.read(cmd_raw);
@@ -231,6 +231,7 @@ void loop()
 
   // debug::plot(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
+  */
   while (micros() - last_active < PERIOD_US)
   {
   }

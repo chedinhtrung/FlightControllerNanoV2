@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include "BasicLinearAlgebra.h"
 #include "datastructs.h"
+#include "interfaces.h"
 #include "drivers/mtf02.h"
-#include "drivers/mpu9250.h"
 #include "drivers/receiver.h"
 
 namespace debug {

@@ -1,4 +1,5 @@
 #include "devices/imu.h"
+#include "debug.h"
 
 Vec3 Imu::remapAndSign(const Vec3 &sensor_frame) const {
     const float arr[3] = {sensor_frame.x, sensor_frame.y, sensor_frame.z};
@@ -64,11 +65,15 @@ bool Imu::read(ImuData &out) {
         return false;
     }
 
+    //debug::log(out);
+
     out.gyro = remapAndSign(out.gyro);
     out.accel = remapAndSign(out.accel);
 
     // Output gyro in rad/s for the rest of the stack.
     out.gyro *= RAD_PER_DEG;
+
+    debug::log(out.gyro);
 
     // Body-frame calibration.
     out.gyro -= gyro_bias_radps_;
