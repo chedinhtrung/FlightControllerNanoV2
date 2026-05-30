@@ -50,14 +50,11 @@ where $\delta\boldsymbol{\theta}$ is the small-angle attitude error (not Euler a
 Following Solà, the continuous-time nominal dynamics are:
 
 $$
-\dot{\mathbf{p}} = \mathbf{v} \\
-\dot{\mathbf{v}} = \mathbf{R}(\mathbf{q})\ (\mathbf{a}_m - \mathbf{a}_b) + \mathbf{g} \\
-\dot{\mathbf{q}} = \mathbf{q} \otimes \frac{1}{2}\,\boldsymbol{\omega} 
+\dot{\mathbf{p}} = \mathbf{v}\\\dot{\mathbf{v}} = \mathbf{R}(\mathbf{q})\ (\mathbf{a}_m - \mathbf{a}_b) + \mathbf{g} \\\dot{\mathbf{q}} = \mathbf{q} \otimes \frac{1}{2}\,\boldsymbol{\omega} 
 $$
 
 $$
-\quad\text{with}\quad \\
-\boldsymbol{\omega}=\mathbf{\omega}_m-\boldsymbol{\omega}_b, \quad
+\quad\text{with}\quad\\\boldsymbol{\omega}=\mathbf{\omega}_m-\boldsymbol{\omega}_b, \quad
 \dot{\mathbf{a}}_b = \mathbf{a}_w, \quad
 \dot{\boldsymbol{\omega}}_b = \boldsymbol{\omega}_w
 $$
@@ -65,15 +62,13 @@ $$
 Discrete propagation used in code (`ESKF::propagate`):
 
 $$
-\mathbf{p} \leftarrow \mathbf{p} + \mathbf{v}\Delta t + \frac{1}{2}\mathbf{a}_w\Delta t^2 \\
-\mathbf{v} \leftarrow = \mathbf{v} + \mathbf{a}_w\Delta t \\
-\mathbf{q} \leftarrow \mathbf{q} \otimes \exp\left((\mathbf{\omega}_m-\boldsymbol{\omega}_b)\Delta t\right)
+\mathbf{p} \leftarrow \mathbf{p} + \mathbf{v}\Delta t + \frac{1}{2}\mathbf{a}_w\Delta t^2\\\mathbf{v} \leftarrow = \mathbf{v} + \mathbf{a}_w\Delta t\\\mathbf{q} \leftarrow \mathbf{q} \otimes \exp\left((\mathbf{\omega}_m-\boldsymbol{\omega}_b)\Delta t\right)
 $$
 
 with:
 
 $$
-\mathbf{a}_w = \mathbf{R}(\mathbf{q})\,(\mathbf{a}_m-\mathbf{a}_b)+\mathbf{g}
+\mathbf{a}_w = \mathbf{R}(\mathbf{q})\ (\mathbf{a}_m-\mathbf{a}_b)+\mathbf{g}
 $$
 
 ## Error-State Kinematics
@@ -159,9 +154,7 @@ $$
 The filter update is:
 
 $$
-\mathbf{K} = \mathbf{P}\mathbf{H}^\top(\mathbf{H}\mathbf{P}\mathbf{H}^\top + \mathbf{V})^{-1} \\
-\delta\hat{\mathbf{x}} = \mathbf{K}\mathbf{r}\\
-\mathbf{P} \leftarrow (\mathbf{I}-\mathbf{K}\mathbf{H})\mathbf{P}(\mathbf{I}-\mathbf{K}\mathbf{H})^\top + \mathbf{K}\mathbf{V}\mathbf{K}^\top
+\mathbf{K} = \mathbf{P}\mathbf{H}^\top(\mathbf{H}\mathbf{P}\mathbf{H}^\top + \mathbf{V})^{-1} \\\delta\hat{\mathbf{x}} = \mathbf{K}\mathbf{r}\\\mathbf{P} \leftarrow (\mathbf{I}-\mathbf{K}\mathbf{H})\mathbf{P}(\mathbf{I}-\mathbf{K}\mathbf{H})^\top + \mathbf{K}\mathbf{V}\mathbf{K}^\top
 $$
 
 (Joseph form, used for improved numerical stability.)
@@ -173,8 +166,7 @@ After update, error is injected into the nominal state (Solà reset step):
 $$
 \mathbf{p} \leftarrow \mathbf{p} + \delta\mathbf{p},
 \quad
-\mathbf{v} \leftarrow \mathbf{v} + \delta\mathbf{v} \\
-\mathbf{q} \leftarrow \mathbf{q} \otimes \exp_q(\delta\boldsymbol{\theta}) \\
+\mathbf{v} \leftarrow \mathbf{v} + \delta\mathbf{v} \\\mathbf{q} \leftarrow \mathbf{q} \otimes \exp_q(\delta\boldsymbol{\theta}) \\
 \mathbf{a}_b \leftarrow \mathbf{a}_b + \delta\mathbf{a}_b,
 \quad
 \boldsymbol{\omega}_b \leftarrow \boldsymbol{\omega}_b + \delta\boldsymbol{\omega}_b
