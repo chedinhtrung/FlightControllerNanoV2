@@ -16,7 +16,7 @@ void StateMachine::update(const PPMCommand &cmd,
     // For now keep whatever flightmode was already set, default VXYZ.
 
     constexpr float TAKEOFF_HEIGHT_AGL_M = 0.04f;
-    constexpr float TAKEOFF_THROTTLE_INTENT = 0.30f;
+    constexpr float TAKEOFF_THROTTLE_INTENT = 0.15f;
 
     constexpr float LAND_HEIGHT_AGL_M = 0.10f;
     constexpr float LAND_STICK_LOW = 0.10f;

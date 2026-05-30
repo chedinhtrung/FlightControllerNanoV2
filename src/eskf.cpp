@@ -11,7 +11,7 @@ ESKF::ESKF()
     // position uncertainty
     P(0, 0) = 0.01f; // x, m^2
     P(1, 1) = 0.01f;
-    P(2, 2) = 0.01f;
+    P(2, 2) = 0.1f;
 
     // velocity uncertainty
     P(3, 3) = 0.01f; // vx, (m/s)^2
@@ -362,7 +362,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer *closest_bu
         return;
     }
 
-    if (rho < 0.01f || rho > 5.0f)
+    if (rho < 0.005f || rho > 5.0f)
     {
         return;
     }
@@ -543,7 +543,7 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer *closest_b
 
     const float rho = flowdata.data.dist_mm * 1e-3f;
 
-    if (rho < 0.01f || rho > 5.0f)
+    if (rho < 0.005f || rho > 5.0f)
     {
         return;
     }

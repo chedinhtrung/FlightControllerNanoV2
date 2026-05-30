@@ -104,6 +104,19 @@ void loop()
   update_optical_flow(1000);
   update_baro();
 
+  Vec3 v_world = eskf.nominal.v;
+
+  EulerAngle e = quaternionToEuler(eskf.nominal.q);
+  float cy = cosf(e.yaw);
+  float sy = sinf(e.yaw);
+
+  Vec3 v_v1{
+      cy * v_world.x + sy * v_world.y,
+      -sy * v_world.x + cy * v_world.y,
+      v_world.z};
+
+  debug::plot(v_v1);
+
   PPMCommand cmd_raw{};
   bool receiver_ok = receiver.read(cmd_raw);
   if (!receiver_ok)
@@ -114,7 +127,7 @@ void loop()
   PPMCommand rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
   PPMCommand vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
 
-  //debug::log(vxyz_cmd);
+  // debug::log(vxyz_cmd);
 
   // state machine uses rpy cmd for thrust 0-1
   statemachine.update(rpy_cmd, eskf.nominal, eskf.h_terrain);
@@ -145,16 +158,11 @@ void loop()
       motors_allowed &&
       !manual_throttle;
 
-  // Ground handling.
-  // Only the state machine decides when this is allowed.
-  if (ground_state)
+  if (flightstate == DISARMED)
   {
-    eskf.reset_zero_vxy(0.01f);
+    // eskf.reset_baro_offset(baro_data.altitude_m);
+    // eskf.reset_zero_vxy(0.01f);
     reset_flight_controllers();
-  }
-
-  if (flightstate == DISARMED){
-    eskf.reset_baro_offset(baro_data.altitude_m);
   }
 
   EulerAngle angle_target{};
@@ -205,37 +213,24 @@ void loop()
     // Mind the sign: + caused fly away.
     throttle = HOVER_THRUST - thrust_adjust;
     throttle = constrain(throttle, 0.0f, 1.0f);
-
-    debug::log(throttle, "Auto");
   }
 
   if (motors_allowed && throttle > 0.1f && throttle <= 1.0f)
   {
     // debug::log(throttle);
-    motor_device.write(throttle, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
+    // motor_device.write(throttle, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
   }
   else
   {
     // debug::log(throttle);
-    motor.set_motor(MotorCommand{0.0f, 0.0f, 0.0f, 0.0f});
+    // motor.set_motor(MotorCommand{0.0f, 0.0f, 0.0f, 0.0f});
+
+    motor_device.write(0.0f, 0.0f, 0.0f, 0.0f);
     reset_flight_controllers();
   }
 
-  Vec3 v_world = eskf.nominal.v;
-
-  EulerAngle e = quaternionToEuler(eskf.nominal.q);
-  float cy = cosf(e.yaw);
-  float sy = sinf(e.yaw);
-
-  Vec3 v_v1{
-      cy * v_world.x + sy * v_world.y,
-      -sy * v_world.x + cy * v_world.y,
-      v_world.z};
-
-  // debug::plot(v_v1);
   // debug::plot(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
-
   while (micros() - last_active < PERIOD_US)
   {
   }

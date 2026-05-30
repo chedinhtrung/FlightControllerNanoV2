@@ -206,7 +206,7 @@ public:
 class VzStabilizer
 {
 private:
-    PID vz_pid = PID(0.55, 0.05f, 0.015f, 0.1f, 0.1f);
+    PID vz_pid = PID(0.45, 0.0f, 0.0f, 0.05f, 0.05f);
 
 public:
     inline float thrust_adjust_from_vz_error(float vz_error)
