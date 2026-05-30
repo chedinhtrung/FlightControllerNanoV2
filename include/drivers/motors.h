@@ -4,9 +4,9 @@
 #include <Arduino.h>
 #include "interfaces.h"
 
-#define FR A8
+#define FR 23
 #define FL 2
-#define BR 11
+#define BR 22
 #define BL 5
 
 struct RawMotor {
