@@ -12,117 +12,117 @@ The implementation uses a 16D nominal state with quaternion attitude and a 15D e
 Nominal state:
 
 $$
-\mathbf{x} =
+x =
 \begin{bmatrix}
-\mathbf{p} \\
-\mathbf{v} \\
-\mathbf{q} \\
-\mathbf{a}_b \\
-\boldsymbol{\omega}_b
+p \\
+v \\
+q \\
+a_b \\
+\omega_b
 \end{bmatrix}
 \in \mathbb{R}^{16}
 $$
 
-- $\mathbf{p}$: position (world)
-- $\mathbf{v}$: velocity (world)
-- $\mathbf{q}$: orientation quaternion (body $\to$ world)
-- $\mathbf{a}_b$: accelerometer bias
-- $\boldsymbol{\omega}_b$: gyroscope bias
+- $p$: position (world)
+- $v$: velocity (world)
+- $q$: orientation quaternion (body $\to$ world)
+- $a_b$: accelerometer bias
+- $\omega_b$: gyroscope bias
 
 Error state:
 
 $$
-\delta \mathbf{x} =
+\delta x =
 \begin{bmatrix}
-\delta\mathbf{p} \\
-\delta\mathbf{v} \\
-\delta\boldsymbol{\theta} \\
-\delta\mathbf{a}_b \\
-\delta\boldsymbol{\omega}_b
+\delta p \\
+\delta v \\
+\delta \theta \\
+\delta a_b \\
+\delta \omega_b
 \end{bmatrix}
 \in \mathbb{R}^{15}
 $$
 
-where $\delta\boldsymbol{\theta}$ is the small-angle attitude error (not Euler angles).
+where $\delta \theta$ is the small-angle attitude error (not Euler angles).
 
 ## Nominal-State Kinematics
 
 Following Solà, the continuous-time nominal dynamics are:
 
 $$
-\dot{\mathbf{p}} = \mathbf{v}\\\dot{\mathbf{v}} = \mathbf{R}(\mathbf{q})\ (\mathbf{a}_m - \mathbf{a}_b) + \mathbf{g} \\\dot{\mathbf{q}} = \mathbf{q} \otimes \frac{1}{2}\,\boldsymbol{\omega} 
+\dot{p} = v\\\dot{v} = R(q)\ (a_m - a_b) + g \\ \dot{q} = q \otimes \frac{1}{2}\,\omega 
 $$
 
 $$
-\quad\text{with}\quad\\\boldsymbol{\omega}=\mathbf{\omega}_m-\boldsymbol{\omega}_b, \quad
-\dot{\mathbf{a}}_b = \mathbf{a}_w, \quad
-\dot{\boldsymbol{\omega}}_b = \boldsymbol{\omega}_w
+\quad\text{with}\quad \\ \omega=\omega_m-\omega_b, \quad
+\dot{a}_b = a_w, \quad
+\dot{\omega}_b = \omega_w
 $$
 
 Discrete propagation used in code (`ESKF::propagate`):
 
 $$
-\mathbf{p} \leftarrow \mathbf{p} + \mathbf{v}\Delta t + \frac{1}{2}\mathbf{a}_w\Delta t^2\\\mathbf{v} \leftarrow = \mathbf{v} + \mathbf{a}_w\Delta t\\\mathbf{q} \leftarrow \mathbf{q} \otimes \exp\left((\mathbf{\omega}_m-\boldsymbol{\omega}_b)\Delta t\right)
+p \leftarrow p + v\Delta t + \frac{1}{2}a_w\Delta t^2 \\ v \leftarrow v + a_w\Delta t \\ q \leftarrow q \otimes \exp\left((\omega_m-\omega_b)\Delta t\right)
 $$
 
 with:
 
 $$
-\mathbf{a}_w = \mathbf{R}(\mathbf{q})\ (\mathbf{a}_m-\mathbf{a}_b)+\mathbf{g}
+a_w = R(q)\ (a_m-a_b)+g
 $$
 
 ## Error-State Kinematics
 
 Using the standard first-order ESKF linearization from Solà:
 $$
-\delta \dot{\mathbf{x}} = \mathbf{F}_x\,\delta \mathbf{x} + \mathbf{i}
+\delta \dot{x} = F_x\,\delta x + i
 $$
 
 The implementation uses the following discrete transition structure:
 
 $$
-\mathbf{F}_x =
+F_x =
 \begin{bmatrix}
-\mathbf{I} & \mathbf{I}\Delta t & \mathbf{0} & \mathbf{0} & \mathbf{0} \\
-\mathbf{0} & \mathbf{I} & -\mathbf{R}[\mathbf{a}_u]_\times\Delta t & -\mathbf{R}\Delta t & \mathbf{0} \\
-\mathbf{0} & \mathbf{0} & \exp(-[\boldsymbol{\omega}_u]_\times\Delta t) & \mathbf{0} & -\mathbf{I}\Delta t \\
-\mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{I} & \mathbf{0} \\
-\mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{I}
+I & I\Delta t & 0 & 0 & 0 \\
+0 & I & -R[a_u]_\times\Delta t & -R\Delta t & 0 \\
+0 & 0 & \exp(-[\omega_u]_\times\Delta t) & 0 & -I\Delta t \\
+0 & 0 & 0 & I & 0 \\
+0 & 0 & 0 & 0 & I
 \end{bmatrix}
 $$
 
-where $\mathbf{a}_u = \mathbf{a}_m-\mathbf{a}_b$, $\boldsymbol{\omega}_u = \boldsymbol{\omega}_m-\boldsymbol{\omega}_b$.
+where $a_u = a_m-a_b$, $\omega_u = \omega_m-\omega_b$.
 
 ## Covariance Propagation
 
 Covariance is propagated as:
 
 $$
-\mathbf{P} \leftarrow \mathbf{F}_x\,\mathbf{P}\,\mathbf{F}_x^\top + \mathbf{Q}_x
+P \leftarrow F_x\,P\,F_x^\top + Q_x
 $$
 
 Define the named blocks:
 
-- $V_i = \sigma_{a_n}^2\Delta t^2\mathbf{I}$
-- $\Theta_i = \sigma_{\omega_n}^2\Delta t^2\mathbf{I}$
-- $A_i = \sigma_{a_w}^2\Delta t\,\mathbf{I}$
-- $\Omega_i = \sigma_{\omega_w}^2\Delta t\,\mathbf{I}$
+- $V_i = \sigma_{a_n}^2\Delta t^2I$
+- $\Theta_i = \sigma_{\omega_n}^2\Delta t^2I$
+- $A_i = \sigma_{a_w}^2\Delta t\,I$
+- $\Omega_i = \sigma_{\omega_w}^2\Delta t\,I$
 
 With error-state ordering
 $
-\delta \mathbf{x} =
-[\delta\mathbf{p},\ \delta\mathbf{v},\ \delta\boldsymbol{\theta},\ \delta\mathbf{a}_b,\ \delta\boldsymbol{\omega}_b]^\top,
+\delta x =
+[\delta p,\ \delta v,\ \delta \theta,\ \delta a_b,\ \delta \omega_b]^\top,
 $
 the implemented process-noise covariance is
 
 $$
-\mathbf{Q}_x =
+Q_x =
 \begin{bmatrix}
-\mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} \\
-\mathbf{0} & V_i & \mathbf{0} & \mathbf{0} & \mathbf{0} \\
-\mathbf{0} & \mathbf{0} & \Theta_i & \mathbf{0} & \mathbf{0} \\
-\mathbf{0} & \mathbf{0} & \mathbf{0} & A_i & \mathbf{0} \\
-\mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \Omega_i
+0 & 0 & 0 & 0 & 0 \\
+0 & V_i & 0 & 0 & 0 \\
+0 & 0 & \Theta_i & 0 & 0 \\
+0 & 0 & 0 & A_i & 0 \\
+0 & 0 & 0 & 0 & \Omega_i
 \end{bmatrix}
 $$
 
@@ -135,26 +135,26 @@ Note that the matrix $F_x$ is sparse and mostly consist of $I$ and $0$ blocks. T
 For a measurement model linearized in error-state form:
 
 $$
-\mathbf{r} = \mathbf{z} - h(\hat{\mathbf{x}})
-\approx \mathbf{H}\,\delta\mathbf{x} + \mathbf{n}
+r = z - h(\hat{x})
+\approx H\,\delta x + n
 $$
 
 Following Solà, the error-state Jacobian is defined as:
 
 $$
-\mathbf{H} \;=\; \left.\frac{\partial h}{\partial \delta \mathbf{x}}\right|_{\mathbf{x}}
+H \;=\; \left.\frac{\partial h}{\partial \delta x}\right|_{x}
 $$
 
 and can be written with chain rule as:
 
 $$
-\mathbf{H} = \left.\frac{\partial h}{\partial \mathbf{x}}\right|_{\hat{\mathbf{x}}}\left.\frac{\partial \mathbf{x}}{\partial \delta\mathbf{x}}\right|_{\delta\mathbf{x}=0} = H_x \cdot X_{\delta x}
+H = \left.\frac{\partial h}{\partial x}\right|_{\hat{x}}\left.\frac{\partial x}{\partial \delta x}\right|_{\delta x=0} = H_x \cdot X_{\delta x}
 $$
 
 The filter update is:
 
 $$
-\mathbf{K} = \mathbf{P}\mathbf{H}^\top(\mathbf{H}\mathbf{P}\mathbf{H}^\top + \mathbf{V})^{-1} \\\delta\hat{\mathbf{x}} = \mathbf{K}\mathbf{r}\\\mathbf{P} \leftarrow (\mathbf{I}-\mathbf{K}\mathbf{H})\mathbf{P}(\mathbf{I}-\mathbf{K}\mathbf{H})^\top + \mathbf{K}\mathbf{V}\mathbf{K}^\top
+K = PH^\top(HPH^\top + V)^{-1} \\ \delta\hat{x} = Kr\\P \leftarrow (I-KH)P(I-KH)^\top + KVK^\top
 $$
 
 (Joseph form, used for improved numerical stability.)
@@ -164,12 +164,11 @@ $$
 After update, error is injected into the nominal state (Solà reset step):
 
 $$
-\mathbf{p} \leftarrow \mathbf{p} + \delta\mathbf{p},
+p \leftarrow p + \delta p,
 \quad
-\mathbf{v} \leftarrow \mathbf{v} + \delta\mathbf{v} \\\mathbf{q} \leftarrow \mathbf{q} \otimes \exp_q(\delta\boldsymbol{\theta}) \\
-\mathbf{a}_b \leftarrow \mathbf{a}_b + \delta\mathbf{a}_b,
+v \leftarrow v + \delta v \\ q \leftarrow q \otimes \exp_q(\delta \theta) \\ a_b \leftarrow a_b + \delta a_b,
 \quad
-\boldsymbol{\omega}_b \leftarrow \boldsymbol{\omega}_b + \delta\boldsymbol{\omega}_b
+\omega_b \leftarrow \omega_b + \delta \omega_b
 $$
 
 Then quaternion is normalized.
@@ -180,11 +179,11 @@ Reset is trivial according to Sola.
 `correct_gravity()` uses normalized accelerometer direction as a gravity-direction measurement:
 
 - Predicted direction in body frame: 
-$$\mathbf{h}(q) = \mathbf{q}^* \otimes \mathbf{f}_w \otimes \mathbf{q}$$
+$$h(q) = q^* \otimes f_w \otimes q$$
 
-with $\mathbf{f}_w=[0,0,-1]^\top$
-- Residual: $\mathbf{r}=\mathbf{z}-\mathbf{h}$
-- Jacobian uses attitude-error block only: $\mathbf{H}_{\theta}= [\mathbf{h(q)}]_\times$
+with $f_w=[0,0,-1]^\top$
+- Residual: $r=z-h$
+- Jacobian uses attitude-error block only: $H_{\theta}= [h(q)]_\times$
 
 Here H is computed directly, it skips the chain-rule in Joan Sola's p.63 eq. 278. 
 
@@ -237,14 +236,14 @@ We use the following frames and points:
 
 Notation:
 
-- ${}_A\mathbf{v}_P$ means the velocity of point $P$, expressed in frame $A$.
+- ${}_Av_P$ means the velocity of point $P$, expressed in frame $A$.
 
-- ${}_A\mathbf{r}_{PQ}$   means the position vector from point $P$ to point $Q$, expressed in frame $A$.
+- ${}_Ar_{PQ}$   means the position vector from point $P$ to point $Q$, expressed in frame $A$.
 
 The ESKF nominal velocity is:
 
 $$
-\mathbf{v} = {}_E\mathbf{v}_G
+v = {}_Ev_G
 $$
 
 which is the velocity of the drone center of mass, expressed in the earth / odom frame.
@@ -252,25 +251,25 @@ which is the velocity of the drone center of mass, expressed in the earth / odom
 The nominal attitude quaternion maps body-frame vectors into earth-frame vectors:
 
 $$
-\mathbf{q}: B \rightarrow E
+q: B \rightarrow E
 $$
 
 Therefore, the rotation from earth to body is:
 
 $$
-{}_B\mathbf{R}_E \cdot {}_Ev \leftrightarrow q^* v q
+{}_BR_E \cdot {}_Ev \leftrightarrow q^* v q
 $$
 
 and the center-of-mass velocity expressed in body frame is:
 
 $$
-{}_B\mathbf{v}_G = {}_B\mathbf{R}_E \ \mathbf{v}
+{}_Bv_G = {}_BR_E \ v
 $$
 
 Then in the body / sensor frame, its velocity is
 
 $$
-{}_B\mathbf{v}_S = {}_B\omega_B \times {}_Br_{GS} + {}_BR_E \ v = - {}_B\mathbf{v}_{SO}
+{}_Bv_S = {}_B\omega_B \times {}_Br_{GS} + {}_BR_E \ v = - {}_Bv_{SO}
 $$
 
 Where $O$ is a reference point on the ground that the sensor is observing, here we approximately say it is the point that the ToF ranger sees.
@@ -278,7 +277,7 @@ Where $O$ is a reference point on the ground that the sensor is observing, here 
 But the sensor actually observe: 
 
 $$
-\frac{d}{dt}{}_B \mathbf r_{SO} = {}_B\mathbf v_{SO} - {}_B\omega_B \times \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix} 
+\frac{d}{dt}{}_B r_{SO} = {}_B v_{SO} - {}_B\omega_B \times \begin{bmatrix}0 \\ 0 \\ \rho\end{bmatrix} 
 $$
 
 With $\rho$ being the distance from the sensor to $O$ that the ranger is measuring. Furthermore, we only observe the flow in $x$ and $y$ direction, so the full measurement is
@@ -309,7 +308,7 @@ $$
 
 So that now we can construct the entire Jacobian w.r.t the error state as: 
 
-$$\mathbf{H} = \begin{bmatrix} \mathbf{0}_{2\times3} & \mathbf{H}_v & \mathbf{H}_\theta & \mathbf{0}_{2\times3} & \mathbf{H}_{w_b}\end{bmatrix}
+$$H = \begin{bmatrix} 0_{2\times3} & H_v & H_\theta & 0_{2\times3} & H_{w_b}\end{bmatrix}
 $$
 
 ## Range sensor measurement model 
