@@ -29,6 +29,7 @@ struct ErrorState
 struct StateBuffer {
     ImuData imudata; 
     NominalState state;
+    BLA::Matrix<15,15> P;
     uint32_t timestamp;
 };
 
@@ -70,15 +71,21 @@ private:
 
     uint32_t last_imu_timestamp = 0;
 
-    
+    bool propagate_core(const ImuData& imudata);
+    int get_closest_buf(uint32_t timestamp) const;
+
+    void correct_flow(const MTF02Data &flowdata, const StateBuffer& closest_buf);
+    void correct_range(const MTF02Data &flowdata, const StateBuffer& closest_buf);
+    void replay_from(int buf_idx);
+
+    // State buffering for delayed correction and delay
+
     StateBuffer state_buf[STATE_BUF_SIZE];
     int buf_head = 0;
     int buf_count = 0; // to keep track of initial when there is garbage data.
-    void push_buffer(const ImuData& imudata);
-    const StateBuffer* get_closest_buf(uint32_t timestamp) const;
 
-    void correct_flow(const MTF02Data &flowdata, const StateBuffer* closest_buf);
-    void correct_range(const MTF02Data &flowdata, const StateBuffer* closest_buf);
+    int newest_buf_index() const;
+    void push_buffer(const ImuData& imudata);
 
 public:
     NominalState nominal;

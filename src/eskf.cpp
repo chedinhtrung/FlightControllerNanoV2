@@ -69,13 +69,13 @@ void ESKF::setup(Vec3 accel)
     nominal.wb = Vec3{0.0f, 0.0f, 0.0f}; // rad/s
 }
 
-void ESKF::propagate(const ImuData &imudata)
+bool ESKF::propagate_core(const ImuData &imudata)
 {
     // P 60 - 61 Joan Sola
     if (last_imu_timestamp == 0)
     {
         last_imu_timestamp = imudata.timestamp;
-        return;
+        return false;
     }
 
     float dt = (uint32_t)(imudata.timestamp - last_imu_timestamp) * 1e-6f;
@@ -83,7 +83,7 @@ void ESKF::propagate(const ImuData &imudata)
     if (dt <= 0.0f || dt > 0.02f)
     {
         last_imu_timestamp = imudata.timestamp;
-        return;
+        return false;
     }
 
     float dt2 = dt * dt;
@@ -164,9 +164,7 @@ void ESKF::propagate(const ImuData &imudata)
     // PFt[:, wb] = P[:, wb]
     PFt.Submatrix<15, 3>(0, 12) = P.Submatrix<15, 3>(0, 12) * 1.0f;
 
-    // -----------------------------------------------------------------------------
     // Pnew = F * PFt + Qx
-    // -----------------------------------------------------------------------------
 
     BLA::Matrix<15, 15> Pnew;
     Pnew.Fill(0.0f);
@@ -193,9 +191,7 @@ void ESKF::propagate(const ImuData &imudata)
     // Pnew[wb, :] = PFt[wb, :]
     Pnew.Submatrix<3, 15>(12, 0) = PFt.Submatrix<3, 15>(12, 0) * 1.0f;
 
-    // -----------------------------------------------------------------------------
     // Add Qx. No need to construct full Qx.
-    // -----------------------------------------------------------------------------
 
     const float q_v = sigma_an_mps2 * sigma_an_mps2 * accel_q_scale * dt2;
     const float q_th = sigma_wn_radps * sigma_wn_radps * dt2;
@@ -227,7 +223,13 @@ void ESKF::propagate(const ImuData &imudata)
 
     last_imu_timestamp = imudata.timestamp;
 
-    push_buffer(imudata);
+    return true;
+}
+void ESKF::propagate(const ImuData &imudata)
+{
+    if(propagate_core(imudata)){
+        push_buffer(imudata);
+    }
 }
 
 void ESKF::inject(const ErrorState &e)
@@ -331,29 +333,35 @@ void ESKF::correct_gravity(const Vec3 &accel)
 
 void ESKF::correct_flow_and_range(const MTF02Data &flowdata)
 {
-    const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
-    if (closest_buf == nullptr)
+    int buf_idx = get_closest_buf(flowdata.timestamp);
+    if (buf_idx == -1)
     {
         return;
     }
-    correct_flow(flowdata, closest_buf);
-    correct_range(flowdata, closest_buf);
+
+    // 1) Restore estimator to delayed time.
+    nominal = state_buf[buf_idx].state;
+    P = state_buf[buf_idx].P;
+    last_imu_timestamp = state_buf[buf_idx].timestamp;
+
+    // correct then save back to buffer
+    correct_flow(flowdata, state_buf[buf_idx]);
+    correct_range(flowdata, state_buf[buf_idx]);
+    state_buf[buf_idx].state = nominal;
+    state_buf[buf_idx].P = P;
+
+    replay_from(buf_idx);
 }
 
-void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer *closest_buf)
+void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_buf)
 {
     // Refer to the flow observation in the docs
 
     // const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
 
-    if (closest_buf == nullptr)
-    {
-        return;
-    }
-
     const float rho = flowdata.data.dist_mm * 1e-3;
 
-    Vec3WithTrust flow = get_raw_flow_with_trust(flowdata, closest_buf->imudata.gyro);
+    Vec3WithTrust flow = get_raw_flow_with_trust(flowdata, closest_buf.imudata.gyro);
     const float trust_x_raw = flow.trust.x;
     const float trust_y_raw = flow.trust.y;
 
@@ -370,20 +378,13 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer *closest_bu
     const float trust_x = constrain(trust_x_raw, 0.05f, 1.0f);
     const float trust_y = constrain(trust_y_raw, 0.05f, 1.0f);
 
-    // static Vec3LPF gyro_delay = Vec3LPF(0.3);
-    // static Vec3LPF v_body_delay = Vec3LPF(0.3);
+    const Vec3 v_G_B = nominal.q.T() * nominal.v * nominal.q;
 
-    // const Vec3 gyro_lagged = gyro_delay.update(gyro);
-    // const Vec3 omegr_GP = gyro_lagged - nominal.wb;
-
-    NominalState state = closest_buf->state;
-    const Vec3 v_G_B = state.q.T() * state.v * state.q;
-
-    const Vec3 omegr_GP = closest_buf->imudata.gyro - state.wb;
+    const Vec3 omegr_GP = closest_buf.imudata.gyro - nominal.wb;
 
     // Earth -> body rotation.
-    BLA::Matrix<3, 3> R_EB = quatToRotMat(state.q); // body -> earth
-    BLA::Matrix<3, 3> R_BE = ~R_EB;                 // earth -> body
+    BLA::Matrix<3, 3> R_EB = quatToRotMat(nominal.q); // body -> earth
+    BLA::Matrix<3, 3> R_BE = ~R_EB;                   // earth -> body
 
     // COM velocity expressed in body frame.
     // const Vec3 v_G_B = nominal.q.T() * nominal.v * nominal.q;
@@ -526,21 +527,14 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer *closest_bu
         e.dwb *= MAX_DWB_CORR / dwb_norm;
     }
 
-    // e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
+    //e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
     // e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
 
     inject(e);
 }
 
-void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer *closest_buf)
+void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer &closest_buf)
 {
-    // const StateBuffer *closest_buf = get_closest_buf(flowdata.timestamp);
-
-    if (closest_buf == nullptr)
-    {
-        return;
-    }
-
     const float rho = flowdata.data.dist_mm * 1e-3f;
 
     if (rho < 0.005f || rho > 5.0f)
@@ -548,8 +542,7 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer *closest_b
         return;
     }
 
-    const NominalState state = closest_buf->state;
-    BLA::Matrix<3, 3> R_EB = quatToRotMat(state.q); // body -> earth
+    BLA::Matrix<3, 3> R_EB = quatToRotMat(nominal.q); // body -> earth
 
     const Vec3 e_z{0.0f, 0.0f, 1.0f};
     const Vec3 _Br_GS = R_G_TO_FLOW;
@@ -566,7 +559,7 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer *closest_b
         return; // too tilted
     }
 
-    float _Er_S = state.p.z + dot(Rz, _Br_GS);
+    float _Er_S = nominal.p.z + dot(Rz, _Br_GS);
 
     float rho_pred = (-h_terrain - _Er_S) / R_22;
 
@@ -798,6 +791,13 @@ void ESKF::correct_baro(float baro_alt_m, float trust)
     e.dv.z = constrain(e.dv.z, -MAX_DVZ_CORR, MAX_DVZ_CORR);
 
     inject(e);
+
+    int newest = newest_buf_index();
+    if (newest >= 0)
+    {
+        state_buf[newest].state = nominal;
+        state_buf[newest].P = P;
+    }
 }
 
 void ESKF::reset_zero_vxy(float sigma_mps)
@@ -868,6 +868,7 @@ void ESKF::push_buffer(const ImuData &imudata)
     state_buf[buf_head] = StateBuffer{
         imudata,
         nominal,
+        P,
         imudata.timestamp};
 
     buf_head = (buf_head + 1) % STATE_BUF_SIZE;
@@ -877,14 +878,14 @@ void ESKF::push_buffer(const ImuData &imudata)
     }
 }
 
-const StateBuffer *ESKF::get_closest_buf(uint32_t timestamp) const
+int ESKF::get_closest_buf(uint32_t timestamp) const
 {
     if (buf_count == 0)
     {
-        return nullptr;
+        return -1;
     }
 
-    const StateBuffer *best = nullptr;
+    int closest_buf_idx = -1;
     uint32_t best_err = UINT32_MAX;
 
     // line search is fine, we have only max 50 or so
@@ -896,9 +897,44 @@ const StateBuffer *ESKF::get_closest_buf(uint32_t timestamp) const
         if (err < best_err)
         {
             best_err = err;
-            best = &s;
+            closest_buf_idx = i;
         }
     }
 
-    return best;
+    return closest_buf_idx;
+}
+
+int ESKF::newest_buf_index() const
+{
+    if (buf_count == 0)
+    {
+        return -1;
+    }
+
+    return (buf_head + STATE_BUF_SIZE - 1) % STATE_BUF_SIZE;
+}
+
+void ESKF::replay_from(int buf_idx)
+{
+    int newest = newest_buf_index();
+    if (newest < 0 || buf_idx < 0)
+    {
+        return;
+    }
+
+    int cur = buf_idx;
+
+    while (cur != newest)
+    {
+        int next = (cur + 1) % STATE_BUF_SIZE;
+
+        if (propagate_core(state_buf[next].imudata))
+        {
+            state_buf[next].state = nominal;
+            state_buf[next].P = P;
+            state_buf[next].timestamp = state_buf[next].imudata.timestamp;
+        }
+
+        cur = next;
+    }
 }
