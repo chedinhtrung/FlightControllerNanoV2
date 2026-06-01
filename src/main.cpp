@@ -10,6 +10,8 @@ PPMCommand control_raw;
 
 Motor motor;
 MotorDevice motor_device(motor);
+ServoOutput servo_output;
+ServoDevice servo_device(servo_output);
 
 MS5611SPI baro;
 Barometer barometer(baro);
@@ -33,7 +35,21 @@ StateMachine statemachine = StateMachine();
 void setup()
 {
   Serial.begin(115200);
-  delay(200);
+  delay(2000);
+   Serial.println("Servo Setting up");
+  if (servo_device.setup())
+  {
+    Serial.println("Servo OK");
+    servo_device.write(0);
+    delay(1400);
+    servo_device.write(20);
+    delay(1400);
+    servo_device.write(0);
+  }
+
+  else {
+    Serial.println("Servo Failure");
+  }
 
   delay(5000);
   if (!imu_device.setup())
@@ -115,7 +131,7 @@ void loop()
       -sy * v_world.x + cy * v_world.y,
       v_world.z};
 
-  //debug::plot(v_v1);
+  debug::plot(v_v1);
 
   PPMCommand cmd_raw{};
   bool receiver_ok = receiver.read(cmd_raw);
@@ -128,6 +144,9 @@ void loop()
 
   PPMCommand rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
   PPMCommand vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
+  servo_device.write(rpy_cmd.C5);
+
+  debug::log(rpy_cmd);
 
   // debug::log(vxyz_cmd);
 

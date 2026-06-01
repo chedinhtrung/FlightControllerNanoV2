@@ -7,7 +7,7 @@
 #define FR 23
 #define FL 2
 #define BR 22
-#define BL 5
+#define BL 3
 
 struct RawMotor {
     uint16_t fl = 0;

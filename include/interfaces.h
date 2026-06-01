@@ -44,6 +44,14 @@ public:
     virtual bool write() { return false; }
 };
 
+class ServoDriver {
+public:
+    virtual ~ServoDriver() = default;
+    virtual bool setup() = 0;
+    virtual void write_angle(int angle_deg) = 0;
+    virtual bool write() { return false; }
+};
+
 class ReceiverDriver {
 public:
     virtual ~ReceiverDriver() = default;

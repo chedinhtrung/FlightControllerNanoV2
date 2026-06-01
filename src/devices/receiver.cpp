@@ -33,6 +33,8 @@ PPMCommand Receiver::to_anglemode(const PPMCommand& cmd) const {
 
     // Yaw rate (degrees / s)
     out.C1 = constrain(out.C1, -35.0f, 35.0f);
+    out.C5 = (cmd.C5 - 1000.0f) / 1000.0f * 180.0f;
+    out.C5 = constrain(out.C5, 0.0f, 180.0f);
 
     return out;
 }
@@ -57,6 +59,8 @@ PPMCommand Receiver::to_vxy_mode(const PPMCommand& cmd) const {
 
     // Yaw rate (degrees / s)
     out.C1 = constrain(out.C1, -35.0f, 35.0f);
+    out.C5 = (cmd.C5 - 1000.0f) / 1000.0f * 180.0f;
+    out.C5 = constrain(out.C5, 0.0f, 180.0f);
 
     return out;
 }
@@ -81,6 +85,8 @@ PPMCommand Receiver::to_vxyz_mode(const PPMCommand& cmd) const {
 
     // Yaw rate (degrees / s)
     out.C1 = constrain(out.C1, -35.0f, 35.0f);
+    out.C5 = (cmd.C5 - 1000.0f) / 1000.0f * 180.0f;
+    out.C5 = constrain(out.C5, 0.0f, 180.0f);
 
     return out;
 }

@@ -38,6 +38,12 @@ bool PPMReceiver::read(PPMCommand &cmd) {
         cmd.C1 = 2000.0f;
     }
 
+    if (cmd.C5 < 900.0f) {
+        cmd.C5 = 1000.0f;
+    } else if (cmd.C5 > 2000.0f) {
+        cmd.C5 = 2000.0f;
+    }
+
     return true;
 }
 

@@ -6,6 +6,7 @@
 #include "devices/imu.h"
 #include "devices/barometer.h"
 #include "devices/motor.h"
+#include "devices/servo.h"
 #include "devices/optical_flow.h"
 #include "devices/receiver.h"
 #include "drivers/motors.h"
@@ -13,6 +14,7 @@
 #include "drivers/ms5611_spi.h"
 #include "drivers/icm42688p.h"
 #include "drivers/receiver.h"
+#include "drivers/servo.h"
 #include "madgwick.h"
 #include "pid.h"
 
@@ -29,6 +31,8 @@ extern PPMCommand control_raw;
 
 extern Motor motor;
 extern MotorDevice motor_device;
+extern ServoOutput servo_output;
+extern ServoDevice servo_device;
 
 extern MS5611SPI baro;
 extern Barometer barometer;
