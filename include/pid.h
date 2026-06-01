@@ -35,8 +35,8 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.00055f, 0.8e-4f, 3e-7f, 0.15f, 0.12f);
-    PID x_rate_pid = PID(0.00065f, 0.8e-4f, 3e-7f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.0005f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
+    PID x_rate_pid = PID(0.0006f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
@@ -77,8 +77,8 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(40.0f, 1e-3f, 0.0f, 1.0f, 0.0f);
-    PID vy_pid_l1 = PID(40.0f, 1e-3f, 0.0f, 1.0f, 0.0f);
+    PID vx_pid_l1 = PID(30.0f, 0.3e-3f, 0.0f, 1.0f, 0.0f);
+    PID vy_pid_l1 = PID(30.0f, 0.3e-3f, 0.0f, 1.0f, 0.0f);
 
     PID vx_pid_l2 = PID(30.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
     PID vy_pid_l2 = PID(30.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
@@ -87,7 +87,7 @@ public:
     inline float deadband_x(float x)
     {
         constexpr float DB_ENTER = 0.01f;
-        constexpr float DB_EXIT = 0.03f;
+        constexpr float DB_EXIT = 0.02f;
 
         static bool in_deadband = true;
 
@@ -110,7 +110,7 @@ public:
     inline float deadband_y(float y)
     {
         constexpr float DB_ENTER = 0.01f;
-        constexpr float DB_EXIT = 0.03f;
+        constexpr float DB_EXIT = 0.02f;
 
         static bool in_deadband = true;
 

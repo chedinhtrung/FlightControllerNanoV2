@@ -263,7 +263,7 @@ void ESKF::correct_gravity(const Vec3 &accel)
     const float g_err = fabsf(acc_norm - 1.0f);
 
     // Trust gravity when it is closer to unit length
-    constexpr float FULL_TRUST_ERR = 0.05f;
+    constexpr float FULL_TRUST_ERR = 0.08f;
     constexpr float ZERO_TRUST_ERR = 0.20f;
 
     if (g_err > ZERO_TRUST_ERR)
@@ -504,7 +504,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
 
     // Safety gatings
     // Allow limited influence of dtheta. If more than 0.5 degrees, saturate at 0.5 degs
-    constexpr float MAX_DTHETA_CORR = 0.5f * RAD_PER_DEG;
+    constexpr float MAX_DTHETA_CORR = 3.0f * RAD_PER_DEG;
     float dtheta_norm = sqrtf(dot(e.dtheta, e.dtheta));
     if (dtheta_norm > MAX_DTHETA_CORR)
     {
@@ -512,7 +512,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
     }
 
     // Allow limited influence on v. If more than 10cm/s, saturate at 10cm/s
-    constexpr float MAX_DV_CORR = 0.10f; // m/s per update
+    constexpr float MAX_DV_CORR = 0.15f; // m/s per update
     float dv_norm = sqrtf(dot(e.dv, e.dv));
     if (dv_norm > MAX_DV_CORR)
     {
@@ -520,7 +520,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
     }
 
     // Same with gyro bias: if more than 0.001, saturate at 0.001 rad/s
-    constexpr float MAX_DWB_CORR = 0.0008f; // rad/s per update
+    constexpr float MAX_DWB_CORR = 0.0015f; // rad/s per update
     float dwb_norm = sqrtf(dot(e.dwb, e.dwb));
     if (dwb_norm > MAX_DWB_CORR)
     {
