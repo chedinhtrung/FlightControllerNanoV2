@@ -77,8 +77,8 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(30.0f, 0.3e-3f, 0.0f, 1.0f, 0.0f);
-    PID vy_pid_l1 = PID(30.0f, 0.3e-3f, 0.0f, 1.0f, 0.0f);
+    PID vx_pid_l1 = PID(25.0f, 1.7e-3f, 0.0f, 1.0f, 0.0f);
+    PID vy_pid_l1 = PID(25.0f, 1.7e-3f, 0.0f, 1.0f, 0.0f);
 
     PID vx_pid_l2 = PID(30.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
     PID vy_pid_l2 = PID(30.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
@@ -161,7 +161,7 @@ public:
     inline EulerAngle vxy_error_to_angle_target(Vec3 v_error, float yawrate)
     {
         constexpr float VEL_DEADBAND = 0.06f;
-        constexpr float SWITCH_VEL = 0.20f;
+        constexpr float SWITCH_VEL = 0.15f;
         constexpr float MAX_ANGLE = 25.0f;
         constexpr float MAX_SLEW_DPS = 70.0f;
 
@@ -206,7 +206,7 @@ public:
 class VzStabilizer
 {
 private:
-    PID vz_pid = PID(0.30, 0.0f, 0.0f, 0.05f, 0.05f);
+    PID vz_pid = PID(0.30, 1e-2f, 0.0f, 0.05f, 0.05f);
 
 public:
     inline float thrust_adjust_from_vz_error(float vz_error)

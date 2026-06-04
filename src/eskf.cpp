@@ -503,8 +503,8 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
     ErrorState e = unpack_error(dx);
 
     // Safety gatings
-    // Allow limited influence of dtheta. If more than 0.5 degrees, saturate at 0.5 degs
-    constexpr float MAX_DTHETA_CORR = 3.0f * RAD_PER_DEG;
+    // Allow limited influence of dtheta. If more than 2 degs, saturate at 2 degs
+    constexpr float MAX_DTHETA_CORR = 2.0f * RAD_PER_DEG;
     float dtheta_norm = sqrtf(dot(e.dtheta, e.dtheta));
     if (dtheta_norm > MAX_DTHETA_CORR)
     {
@@ -519,8 +519,8 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
         e.dv *= MAX_DV_CORR / dv_norm;
     }
 
-    // Same with gyro bias: if more than 0.001, saturate at 0.001 rad/s
-    constexpr float MAX_DWB_CORR = 0.0015f; // rad/s per update
+    // Same with gyro bias: if more than 0.0002, saturate at 0.001 rad/s
+    constexpr float MAX_DWB_CORR = 0.0002f; // rad/s per update
     float dwb_norm = sqrtf(dot(e.dwb, e.dwb));
     if (dwb_norm > MAX_DWB_CORR)
     {
@@ -657,7 +657,7 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer &closest_b
         e.dp.z = constrain(e.dp.z, -MAX_DPZ_CORR, MAX_DPZ_CORR);
     }
 
-    constexpr float MAX_DVZ_CORR = 0.20f; // m/s per update
+    constexpr float MAX_DVZ_CORR = 0.15f; // m/s per update
     if (fabsf(e.dv.z) > MAX_DVZ_CORR)
     {
         e.dv.z = constrain(e.dv.z, -MAX_DVZ_CORR, MAX_DVZ_CORR);
@@ -671,8 +671,8 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer &closest_b
     }
 
     // Optional: kill effect on accel and gyro bias
-    e.dab = Vec3{0.0f, 0.0f, 0.0f};
-    e.dwb = Vec3{0.0f, 0.0f, 0.0f};
+    //e.dab = Vec3{0.0f, 0.0f, 0.0f};
+    // e.dwb = Vec3{0.0f, 0.0f, 0.0f};
 
     inject(e);
 }
@@ -930,6 +930,7 @@ void ESKF::replay_from(int buf_idx)
 
         if (propagate_core(state_buf[next].imudata))
         {
+            correct_gravity(state_buf[next].imudata.accel);
             state_buf[next].state = nominal;
             state_buf[next].P = P;
             state_buf[next].timestamp = state_buf[next].imudata.timestamp;
