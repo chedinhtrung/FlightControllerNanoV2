@@ -930,7 +930,7 @@ void ESKF::replay_from(int buf_idx)
 
         if (propagate_core(state_buf[next].imudata))
         {
-            correct_gravity(state_buf[next].imudata.accel);
+            //correct_gravity(state_buf[next].imudata.accel);
             state_buf[next].state = nominal;
             state_buf[next].P = P;
             state_buf[next].timestamp = state_buf[next].imudata.timestamp;
