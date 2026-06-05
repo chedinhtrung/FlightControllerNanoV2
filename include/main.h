@@ -105,12 +105,17 @@ inline EulerAngle compute_angle_target_from_cmd(const PPMCommand &rpy_cmd, const
         -sy * v_world.x + cy * v_world.y,
         v_world.z};
 
+    Vec3 vec_vxy_cmd{
+        vxy_cmd.C2,
+        vxy_cmd.C4,
+        0.0f};
+
     Vec3 vxy_error{
         vxy_cmd.C2 - v_v1.x,
         vxy_cmd.C4 - v_v1.y,
         0.0f};
 
-    angle_target_vel = vxy_stabilizer.vxy_error_to_angle_target(vxy_error, vxy_cmd.C1);
+    angle_target_vel = vxy_stabilizer.vxy_error_to_angle_target(vec_vxy_cmd, vxy_error, vxy_cmd.C1);
 
     EulerAngle angle_target_stick{
         rpy_cmd.C1 * 0.5f,

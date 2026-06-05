@@ -77,11 +77,11 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(25.0f, 1.7e-3f, 0.0f, 1.0f, 0.0f);
-    PID vy_pid_l1 = PID(25.0f, 1.7e-3f, 0.0f, 1.0f, 0.0f);
+    PID vx_pid_l1 = PID(22.0f, 1.7e-3f, 0.0f, 1.0f, 0.0f);
+    PID vy_pid_l1 = PID(22.0f, 1.7e-3f, 0.0f, 1.0f, 0.0f);
 
-    PID vx_pid_l2 = PID(30.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
-    PID vy_pid_l2 = PID(30.0f, 0.0f, 0.1e-4f, 0.0f, 1.5f);
+    PID vx_pid_l2 = PID(35.0f, 0.0f, 0.2e-4f, 0.0f, 1.5f);
+    PID vy_pid_l2 = PID(35.0f, 0.0f, 0.2e-4f, 0.0f, 1.5f);
 
 public:
     inline float deadband_x(float x)
@@ -158,7 +158,7 @@ public:
         return current + delta;
     }
 
-    inline EulerAngle vxy_error_to_angle_target(Vec3 v_error, float yawrate)
+    inline EulerAngle vxy_error_to_angle_target(Vec3 target_v, Vec3 v_error, float yawrate)
     {
         constexpr float VEL_DEADBAND = 0.06f;
         constexpr float SWITCH_VEL = 0.15f;
@@ -192,13 +192,18 @@ public:
         pitch_target = slewLimit(pitch_target, last_pitch, MAX_SLEW_DPS, DT);
         roll_target = slewLimit(roll_target, last_roll, MAX_SLEW_DPS, DT);
 
+        // feed forward term 
+        constexpr float FFWD_DEG_PER_MPS = 0.5f; // how much feed forward to apply, 0.5 means 50% of the ideal feed forward angle is applied as direct feed forward
+        float pitch_fwd = -target_v.x * FFWD_DEG_PER_MPS;   // each m/s target needs about 5 degs to MAINTAIN due to
+        float roll_fwd = target_v.y * FFWD_DEG_PER_MPS;
+
         last_pitch = pitch_target;
         last_roll = roll_target;
 
         return EulerAngle{
             yawrate,
-            -pitch_target,
-            roll_target};
+            -pitch_target + pitch_fwd,
+            roll_target + roll_fwd};
     }
     void reset();
 };
