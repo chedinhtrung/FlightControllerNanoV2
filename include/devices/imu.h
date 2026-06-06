@@ -17,9 +17,9 @@ private:
     bool calibrate();
     Vec3 remapAndSign(const Vec3 &sensor_frame) const;
 
-    static constexpr int IMU_MAP_X_SRC = 1;
-    static constexpr int IMU_MAP_X_SIGN = -1;
-    static constexpr int IMU_MAP_Y_SRC = 0;
+    static constexpr int IMU_MAP_X_SRC = 0;
+    static constexpr int IMU_MAP_X_SIGN = 1;
+    static constexpr int IMU_MAP_Y_SRC = 1;
     static constexpr int IMU_MAP_Y_SIGN = -1;
     static constexpr int IMU_MAP_Z_SRC = 2;
     static constexpr int IMU_MAP_Z_SIGN = -1;

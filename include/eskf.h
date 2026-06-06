@@ -39,11 +39,11 @@ private:
     BLA::Matrix<15, 15> P;  // Covariance of the estimation
     BLA::Matrix<15, 15> Fx; // Transition
 
-    // accel white noise, m/s^2 / sqrt(Hz)
+    // accel white noise, m/s^2
     float sigma_an_mps2 = 0.9f;
 
-    // gyro white noise, rad/s / sqrt(Hz)
-    float sigma_wn_radps = 0.003f;
+    // gyro white noise, rad/s
+    float sigma_wn_radps = 0.01f;
 
     // accel bias random walk, m/s^2 / sqrt(Hz)
     float sigma_aw = 0.002f;
@@ -58,7 +58,7 @@ private:
     // in truth the error is dimensionless (just error between 2 unit vectors)
     // but for small errors, it approximately IS the angle in radian which we use
     // for ease of interpretability
-    float gravity_direction_sigma = 3.0f * DEG_TO_RAD;
+    float gravity_direction_sigma = 3.0f * RAD_PER_DEG;
 
     // Optical flow uncertainty measured in rad per sec of angular change in the image
     float sigma_flow_radps = 0.13f; // rad/s / sqrt(Hz)

@@ -2,7 +2,6 @@
 #define RECEIVER_H
 
 #include <Arduino.h>
-#include <PulsePosition.h>
 #include "interfaces.h"
 
 #define PPM_PIN 6
@@ -32,7 +31,7 @@ public:
     bool read(RPICommand &cmd) override;
 
 private:
-    PulsePositionInput in;
+
 };
 
 class RPIReceiver : public ReceiverDriver {

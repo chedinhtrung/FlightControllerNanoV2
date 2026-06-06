@@ -1,17 +1,13 @@
 #include "drivers/receiver.h"
 
 PPMReceiver::PPMReceiver() {
-    in.begin(PPM_PIN);
+    // TODO: initialize i Bus with Serial (Dake H743 does not support PPM)
 }
 
 bool PPMReceiver::read(PPMCommand &cmd) {
     cmd.timestamp = micros();
-    cmd.C1 = in.read(1);
-    cmd.C2 = in.read(2);
-    cmd.C3 = in.read(3);
-    cmd.C4 = in.read(4);
-    cmd.C5 = in.read(5);
-    cmd.C6 = in.read(6);
+    // TODO: read channels from i Bus
+
 
     // Prevent zeroes at startup
     if (cmd.C3 < 1000.0f) {
