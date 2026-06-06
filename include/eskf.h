@@ -40,7 +40,7 @@ private:
     BLA::Matrix<15, 15> Fx; // Transition
 
     // accel white noise, m/s^2 / sqrt(Hz)
-    float sigma_an_mps2 = 0.8f;
+    float sigma_an_mps2 = 0.9f;
 
     // gyro white noise, rad/s / sqrt(Hz)
     float sigma_wn_radps = 0.003f;

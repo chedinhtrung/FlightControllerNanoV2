@@ -512,7 +512,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
     }
 
     // Allow limited influence on v. If more than 10cm/s, saturate at 10cm/s
-    constexpr float MAX_DV_CORR = 0.15f; // m/s per update
+    constexpr float MAX_DV_CORR = 0.30f; // m/s per update
     float dv_norm = sqrtf(dot(e.dv, e.dv));
     if (dv_norm > MAX_DV_CORR)
     {
@@ -520,7 +520,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
     }
 
     // Same with gyro bias: if more than 0.0002, saturate at 0.001 rad/s
-    constexpr float MAX_DWB_CORR = 0.0002f; // rad/s per update
+    constexpr float MAX_DWB_CORR = 0.0005f; // rad/s per update
     float dwb_norm = sqrtf(dot(e.dwb, e.dwb));
     if (dwb_norm > MAX_DWB_CORR)
     {
@@ -930,7 +930,7 @@ void ESKF::replay_from(int buf_idx)
 
         if (propagate_core(state_buf[next].imudata))
         {
-            //correct_gravity(state_buf[next].imudata.accel);
+            correct_gravity(state_buf[next].imudata.accel);
             state_buf[next].state = nominal;
             state_buf[next].P = P;
             state_buf[next].timestamp = state_buf[next].imudata.timestamp;

@@ -96,6 +96,7 @@ Important assumption:
 ### IMU
 
 - Driver: `src/drivers/mpu9250.cpp` (`MPU9250`)
+          `src/drivers/icm42688p.h`
 - Device: `src/devices/imu.cpp` (`Imu`)
 
 Function:
