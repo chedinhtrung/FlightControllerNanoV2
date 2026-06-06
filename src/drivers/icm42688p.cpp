@@ -1,9 +1,9 @@
 #include "drivers/icm42688p.h"
-#include <SPI.h>
+#include "debug.h"
 
 namespace
 {
-    const SPISettings kImuSpiSettings(4000000, MSBFIRST, SPI_MODE0);
+    const SPISettings kImuSpiSettings(4000000, MSBFIRST, SPI_MODE3);
 
     inline int16_t toInt16(uint8_t msb, uint8_t lsb)
     {
@@ -65,45 +65,45 @@ float ICM42688P::accelLsbPerG(AccelFsSel fs_sel)
 
 uint8_t ICM42688P::readRegister(uint8_t reg)
 {
-    SPI.beginTransaction(kImuSpiSettings);
-    digitalWrite(ICM42688P_CS_PIN, LOW);
-    SPI.transfer(reg | READ_MASK);
-    const uint8_t value = SPI.transfer(0x00);
-    digitalWrite(ICM42688P_CS_PIN, HIGH);
-    SPI.endTransaction();
+    spi_.beginTransaction(kImuSpiSettings);
+    digitalWrite(I428P_CS_PIN, LOW);
+    spi_.transfer(reg | READ_MASK);
+    const uint8_t value = spi_.transfer(0x00);
+    digitalWrite(I428P_CS_PIN, HIGH);
+    spi_.endTransaction();
     return value;
 }
 
 bool ICM42688P::writeRegister(uint8_t reg, uint8_t value)
 {
-    SPI.beginTransaction(kImuSpiSettings);
-    digitalWrite(ICM42688P_CS_PIN, LOW);
-    SPI.transfer(reg & ~READ_MASK);
-    SPI.transfer(value);
-    digitalWrite(ICM42688P_CS_PIN, HIGH);
-    SPI.endTransaction();
+    spi_.beginTransaction(kImuSpiSettings);
+    digitalWrite(I428P_CS_PIN, LOW);
+    spi_.transfer(reg & ~READ_MASK);
+    spi_.transfer(value);
+    digitalWrite(I428P_CS_PIN, HIGH);
+    spi_.endTransaction();
     return true;
 }
 
 bool ICM42688P::readBurst(uint8_t start_reg, uint8_t *buffer, size_t len)
 {
-    SPI.beginTransaction(kImuSpiSettings);
-    digitalWrite(ICM42688P_CS_PIN, LOW);
-    SPI.transfer(start_reg | READ_MASK);
+    spi_.beginTransaction(kImuSpiSettings);
+    digitalWrite(I428P_CS_PIN, LOW);
+    spi_.transfer(start_reg | READ_MASK);
     for (size_t i = 0; i < len; ++i)
     {
-        buffer[i] = SPI.transfer(0x00);
+        buffer[i] = spi_.transfer(0x00);
     }
-    digitalWrite(ICM42688P_CS_PIN, HIGH);
-    SPI.endTransaction();
+    digitalWrite(I428P_CS_PIN, HIGH);
+    spi_.endTransaction();
     return true;
 }
 
 bool ICM42688P::setup()
 {
-    SPI.begin();
-    pinMode(ICM42688P_CS_PIN, OUTPUT);
-    digitalWrite(ICM42688P_CS_PIN, HIGH);
+    pinMode(I428P_CS_PIN, OUTPUT);
+    digitalWrite(I428P_CS_PIN, HIGH);
+    spi_.begin();
     delay(5);
 
     // Ensure we are in USER BANK 0.

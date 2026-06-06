@@ -3,8 +3,13 @@
 
 #include <Arduino.h>
 #include "interfaces.h"
+#include <SPI.h>
 
-#define ICM42688P_CS_PIN 9
+#define I428P_CS_PIN PA4
+#define SPI_CLOCK_HZ 1000000
+#define I428P_SCK_PIN PA5
+#define I428P_MISO_PIN PA6
+#define I428P_MOSI_PIN PA7
 
 class ICM42688P : public ImuDriver
 {
@@ -13,6 +18,7 @@ public:
     bool read(ImuData &data) override;
 
 private:
+
     enum class GyroFsSel : uint8_t {
         Dps2000 = 0,
         Dps1000 = 1,
@@ -30,6 +36,9 @@ private:
         G4 = 2,
         G2 = 3,
     };
+
+    // SPI interface
+    SPIClass spi_ = SPIClass(I428P_MOSI_PIN, I428P_MISO_PIN, I428P_SCK_PIN);
 
     // Datasheet section: USER BANK 0 register map.
     static constexpr uint8_t READ_MASK = 0x80;
