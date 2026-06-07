@@ -14,7 +14,12 @@ inline int motor_float_to_raw(float m) {
 }
 
 Motor::Motor() {
-    // TODO: Setup motor PWM frequency and resolution
+    pinMode(FL, OUTPUT);
+    pinMode(FR, OUTPUT);
+    pinMode(BL, OUTPUT);
+    pinMode(BR, OUTPUT);
+    analogWriteResolution(12);
+    analogWriteFrequency(2000);
 }
 
 void Motor::set_motor_raw(int fl, int fr, int bl, int br) {
