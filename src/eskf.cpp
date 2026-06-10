@@ -127,7 +127,6 @@ bool ESKF::propagate_core(const ImuData &imudata)
 
     // This mess is doint P = FPF^T + Qx, but optimized for the fact that
     // F is mostly zeroes and I
-    const BLA::Eye<3, 3> I3 = BLA::Eye<3, 3>();
 
     const BLA::Matrix<3, 3> Ra_udt =
         R * skewSymmetric(accel_u) * dt;

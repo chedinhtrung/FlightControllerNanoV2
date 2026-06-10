@@ -43,13 +43,13 @@ private:
     float sigma_an_mps2 = 0.9f;
 
     // gyro white noise, rad/s / sqrt(Hz)
-    float sigma_wn_radps = 0.02f;
+    float sigma_wn_radps = 0.003f;
 
     // accel bias random walk, m/s^2 / sqrt(Hz)
-    float sigma_aw = 0.002f;
+    float sigma_aw = 0.005f;
 
     // gyro bias random walk, rad/s / sqrt(Hz)
-    float sigma_ww_radps = 0.00005f;
+    float sigma_ww_radps = 0.0005f;
 
     // How much we trust gravity direction to reflect
     // drone's orientation
@@ -61,11 +61,11 @@ private:
     float gravity_direction_sigma = 3.0f * DEG_TO_RAD;
 
     // Optical flow uncertainty measured in rad per sec of angular change in the image
-    float sigma_flow_radps = 0.13f; // rad/s / sqrt(Hz)
+    float sigma_flow_radps = 0.13f; // rad/s
 
-    float sigma_range_m = 0.05f; // measurement noise of range sensor, in meters/sqrt(Hz)
+    float sigma_range_m = 0.05f; // measurement noise of range sensor, in meters
 
-    float sigma_baro_m = 0.8; // measurement noise of barometer, in meters / sqrt(Hz)
+    float sigma_baro_m = 0.8; // measurement noise of barometer, in meters 
 
     float baro_offset_m = 0.0f;
 
@@ -97,8 +97,8 @@ public:
     void propagate(const ImuData &imudata);
 
     void correct_gravity(const Vec3 &accel);
-    void ESKF::correct_flow_and_range(const MTF02Data &flowdata);
-    void ESKF::correct_baro(float baro_alt_m, float trust=1.0f);
+    void correct_flow_and_range(const MTF02Data &flowdata);
+    void correct_baro(float baro_alt_m, float trust=1.0f);
 
     void reset_zero_vxy(float sigma_mps = 0.03f);
     void reset_baro_offset(float baro_alt_m);
