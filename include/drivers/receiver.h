@@ -6,7 +6,8 @@
 
 #define PPM_PIN 6
 
-struct PPMCommand {
+struct PPMCommand
+{
     float C1 = 1500.0f;
     float C2 = 1500.0f;
     float C3 = 1000.0f;
@@ -20,21 +21,40 @@ struct PPMCommand {
     uint32_t timestamp;
 };
 
-struct RPICommand {
+struct IBusFrame
+{
+    uint8_t len;
+    uint8_t command;
+    uint16_t channels[14];
+    uint16_t checksum;
 };
 
-class PPMReceiver : public ReceiverDriver {
+struct RPICommand
+{
+};
+
+class PPMReceiver : public ReceiverDriver
+{
 public:
     PPMReceiver();
 
     bool read(PPMCommand &cmd) override;
     bool read(RPICommand &cmd) override;
 
-private:
+    
 
+private:
+    HardwareSerial _serial = HardwareSerial(PB5, PB6);
+    bool parseIBus(uint8_t b, IBusFrame& out);
+
+private:
+    uint8_t buffer[32];
+    uint8_t index = 0;
+    bool checksum();
 };
 
-class RPIReceiver : public ReceiverDriver {
+class RPIReceiver : public ReceiverDriver
+{
 public:
     bool read(PPMCommand &cmd) override;
     bool read(RPICommand &cmd) override;
