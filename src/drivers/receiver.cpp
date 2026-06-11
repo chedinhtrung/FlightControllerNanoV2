@@ -3,15 +3,9 @@
 
 PPMReceiver::PPMReceiver()
 {
-    _serial.begin(115200);
-    while (_serial.available())
-    {
-        uint8_t b = _serial.read();
-        if (b < 16)
-            Serial.print("0");
-        Serial.print(b, HEX);
-        Serial.print(" ");
-    }
+    _serial.setRx(PB5);
+    _serial.setTx(PB6_ALT1);
+    _serial.begin(115200, SERIAL_8N1);
 }
 
 bool PPMReceiver::parseIBus(uint8_t b, IBusFrame &out)
@@ -74,7 +68,6 @@ bool PPMReceiver::read(PPMCommand &cmd)
     bool read_ok = false;
     while (_serial.available())
     {
-        Serial.println("...");
         read_ok = parseIBus(_serial.read(), frame);
     }
     if (!read_ok)

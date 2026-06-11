@@ -44,7 +44,7 @@ public:
     
 
 private:
-    HardwareSerial _serial = HardwareSerial(PB5, PB6);
+    HardwareSerial _serial = HardwareSerial(UART5);
     bool parseIBus(uint8_t b, IBusFrame& out);
 
 private:
