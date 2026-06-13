@@ -104,7 +104,15 @@ void debug::log(const PPMCommand &value, const char *label) {
     Serial.print(" C5=");
     Serial.print(value.C5, 2);
     Serial.print(" C6=");
-    Serial.println(value.C6, 2);
+    Serial.print(value.C6, 2);
+    Serial.print(" C7=");
+    Serial.print(value.C7, 2);
+    Serial.print(" C8=");
+    Serial.print(value.C8, 2);
+    Serial.print(" C9=");
+    Serial.print(value.C9, 2);
+    Serial.print(" C10=");
+    Serial.println(value.C10, 2);
 }
 
 void debug::log(const MTF02Data &value, const char *label) {
