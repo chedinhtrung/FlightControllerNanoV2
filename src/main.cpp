@@ -15,6 +15,8 @@ VelStabilizer vxy_stabilizer = VelStabilizer();
 
 VzStabilizer vz_stabilizer = VzStabilizer();
 
+PositionHoldController pos_hold_controller = PositionHoldController();
+
 ESKF eskf = ESKF();
 
 StateMachine statemachine = StateMachine();
