@@ -10,6 +10,7 @@ PPMCommand control_raw;
 
 Motor motor;
 MotorDevice motor_device(motor);
+RPi rpi;
 ServoOutput servo_output;
 ServoDevice servo_device(servo_output);
 
@@ -37,6 +38,7 @@ StateMachine statemachine = StateMachine();
 void setup()
 {
   Serial.begin(115200);
+  rpi.setup();
   delay(2000);
   Serial.println("Servo Setting up");
   if (servo_device.setup())

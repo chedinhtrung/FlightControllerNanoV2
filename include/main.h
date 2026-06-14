@@ -6,6 +6,7 @@
 #include "devices/imu.h"
 #include "devices/barometer.h"
 #include "devices/motor.h"
+#include "devices/rpi.h"
 #include "devices/servo.h"
 #include "devices/optical_flow.h"
 #include "devices/receiver.h"
@@ -31,6 +32,7 @@ extern PPMCommand control_raw;
 
 extern Motor motor;
 extern MotorDevice motor_device;
+extern RPi rpi;
 extern ServoOutput servo_output;
 extern ServoDevice servo_device;
 
