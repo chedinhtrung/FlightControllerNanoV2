@@ -28,6 +28,8 @@ VelStabilizer vxy_stabilizer = VelStabilizer();
 
 VzStabilizer vz_stabilizer = VzStabilizer();
 
+PositionHoldController pos_hold_controller = PositionHoldController();
+
 ESKF eskf = ESKF();
 
 StateMachine statemachine = StateMachine();
@@ -36,7 +38,7 @@ void setup()
 {
   Serial.begin(115200);
   delay(2000);
-   Serial.println("Servo Setting up");
+  Serial.println("Servo Setting up");
   if (servo_device.setup())
   {
     Serial.println("Servo OK");
@@ -47,7 +49,8 @@ void setup()
     servo_device.write(0);
   }
 
-  else {
+  else
+  {
     Serial.println("Servo Failure");
   }
 
@@ -113,12 +116,23 @@ void loop()
 
   eskf.propagate(imu_data);
   eskf.correct_gravity(imu_data.accel);
-  
-  //debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
 
-  
+  // debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
+
   update_optical_flow(1000);
   update_baro();
+
+  PPMCommand cmd_raw{};
+  bool receiver_ok = receiver.read(cmd_raw);
+  if (!receiver_ok)
+  {
+    Serial.println("receiver failure");
+  }
+
+  // debug::log(cmd_raw);
+
+  PPMCommand rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
+  PPMCommand vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
 
   Vec3 v_world = eskf.nominal.v;
 
@@ -131,22 +145,11 @@ void loop()
       -sy * v_world.x + cy * v_world.y,
       v_world.z};
 
-  debug::plot(v_v1);
+  // debug::plot(v_v1);
 
-  PPMCommand cmd_raw{};
-  bool receiver_ok = receiver.read(cmd_raw);
-  if (!receiver_ok)
-  {
-    Serial.println("receiver failure");
-  }
-
-  //debug::log(cmd_raw);
-
-  PPMCommand rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
-  PPMCommand vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
-  servo_device.write(rpy_cmd.C5);
-
-  debug::log(rpy_cmd);
+  //  Position hold if vxy is 0
+  
+  //debug::log(rpy_cmd);
 
   // debug::log(vxyz_cmd);
 
@@ -184,6 +187,47 @@ void loop()
     eskf.reset_baro_offset(baro_data.altitude_m);
     eskf.reset_zero_vxy(0.01f);
     reset_flight_controllers();
+  }
+
+  
+  if (ground_state)
+  {
+    pos_hold_controller.active = false;
+    pos_hold_controller.target = eskf.nominal.p;
+  }
+  
+  if (fabsf(vxyz_cmd.C2) <= 0.05f && fabsf(vxyz_cmd.C4) <= 0.05f)
+  {
+    if (!pos_hold_controller.active)
+    {
+      pos_hold_controller.active = true;
+      pos_hold_controller.target = eskf.nominal.p;
+    }
+
+    Vec3 pos_error = pos_hold_controller.target - eskf.nominal.p;
+
+    if (dot(pos_error, pos_error) < 0.0004f)
+    {
+      pos_error = {0.0f, 0.0f, 0.0f};
+    }
+
+   
+    Vec3 pos_error_v1{
+        cosf(e.yaw) * pos_error.x + sy * pos_error.y,
+        -sinf(e.yaw) * pos_error.x + cy * pos_error.y,
+        0.0f};
+    
+    Vec3 vcmd_v1 = pos_hold_controller.vel_from_pos_error(pos_error_v1);
+    
+    vxyz_cmd.C2 = vcmd_v1.x;
+    vxyz_cmd.C4 = vcmd_v1.y;
+
+    debug::log(pos_error);
+    //Serial.println("Position hold active");
+  }
+  else
+  {
+    pos_hold_controller.active = false;
   }
 
   EulerAngle angle_target{};
@@ -252,7 +296,7 @@ void loop()
 
   // debug::plot(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
-  
+
   while (micros() - last_active < PERIOD_US)
   {
   }

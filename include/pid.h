@@ -35,8 +35,8 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.00045f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
-    PID x_rate_pid = PID(0.00055f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.0004f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
+    PID x_rate_pid = PID(0.0005f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
@@ -77,11 +77,11 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(25.0f, 1.7e-3f, 0.0f, 1.0f, 0.0f);
-    PID vy_pid_l1 = PID(25.0f, 1.7e-3f, 0.0f, 1.0f, 0.0f);
+    PID vx_pid_l1 = PID(25.0f, 1.7e-3f, 0.1e-4f, 1.0f, 0.0f);
+    PID vy_pid_l1 = PID(25.0f, 1.7e-3f, 0.1e-4f, 1.0f, 0.0f);
 
-    PID vx_pid_l2 = PID(35.0f, 0.0f, 0.3e-4f, 0.0f, 1.5f);
-    PID vy_pid_l2 = PID(35.0f, 0.0f, 0.3e-4f, 0.0f, 1.5f);
+    PID vx_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
+    PID vy_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
 
 public:
     inline float deadband_x(float x)
@@ -192,9 +192,9 @@ public:
         pitch_target = slewLimit(pitch_target, last_pitch, MAX_SLEW_DPS, DT);
         roll_target = slewLimit(roll_target, last_roll, MAX_SLEW_DPS, DT);
 
-        // feed forward term 
+        // feed forward term
         constexpr float FFWD_DEG_PER_MPS = 3.0f;
-        float pitch_fwd = -target_v.x * FFWD_DEG_PER_MPS;   // each m/s target needs about 2.5 degs to MAINTAIN due to drag
+        float pitch_fwd = -target_v.x * FFWD_DEG_PER_MPS; // each m/s target needs about 2.5 degs to MAINTAIN due to drag
         float roll_fwd = target_v.y * FFWD_DEG_PER_MPS;
 
         last_pitch = pitch_target;
@@ -220,7 +220,44 @@ public:
         adj = constrain(adj, -0.3, 0.3);
         return adj;
     }
-    inline void reset(){vz_pid.reset();}
+    inline void reset() { vz_pid.reset(); }
 };
 
+class PositionHoldController
+{
+private:
+    float KP_POS = 1.0f; // m/s per m error
+    float MAX_V = 0.8f;  // m/s
+
+public:
+    Vec3 target;
+    bool active = false;
+    inline Vec3 vel_from_pos_error(const Vec3& pos_error)
+    {
+
+        float dist = sqrt(dot(pos_error, pos_error));
+
+        float mult;
+
+        if (dist < 0.1f)
+        {
+            mult = 0.8f;
+        }
+        else if (dist < 0.4f)
+        {
+            float t = (dist - 0.1f) / 0.3f;
+            mult = 0.8f + t * (0.4f - 0.8f);
+        }
+        else
+        {
+            mult = 0.4f;
+        }
+
+        Vec3 v_cmd = pos_error * mult;
+        v_cmd.x = constrain(v_cmd.x, -MAX_V, MAX_V);
+        v_cmd.y = constrain(v_cmd.y, -MAX_V, MAX_V);            
+        
+        return v_cmd;
+    }
+};
 #endif
