@@ -77,8 +77,8 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(25.0f, 1.7e-3f, 0.1e-4f, 1.0f, 0.0f);
-    PID vy_pid_l1 = PID(25.0f, 1.7e-3f, 0.1e-4f, 1.0f, 0.0f);
+    PID vx_pid_l1 = PID(35.0f, 0.0f, 0.1e-4f, 1.0f, 0.0f);
+    PID vy_pid_l1 = PID(35.0f, 0.0f, 0.1e-4f, 1.0f, 0.0f);
 
     PID vx_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
     PID vy_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
@@ -241,16 +241,16 @@ public:
 
         if (dist < 0.1f)
         {
-            mult = 0.8f;
+            mult = 0.2f;
         }
         else if (dist < 0.4f)
         {
             float t = (dist - 0.1f) / 0.3f;
-            mult = 0.8f + t * (0.4f - 0.8f);
+            mult = 0.2f + t * 0.4f;
         }
         else
         {
-            mult = 0.4f;
+            mult = 0.6f;
         }
 
         Vec3 v_cmd = pos_error * mult;

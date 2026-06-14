@@ -119,7 +119,7 @@ void loop()
 
   // debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
 
-  update_optical_flow(1000);
+  update_optical_flow(800);
   update_baro();
 
   PPMCommand cmd_raw{};
