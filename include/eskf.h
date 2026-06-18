@@ -26,10 +26,11 @@ struct ErrorState
     Vec3 dwb;
 };
 
-struct StateBuffer {
-    ImuData imudata; 
+struct StateBuffer
+{
+    ImuData imudata;
     NominalState state;
-    BLA::Matrix<15,15> P;
+    BLA::Matrix<15, 15> P;
     uint32_t timestamp;
 };
 
@@ -65,17 +66,15 @@ private:
 
     float sigma_range_m = 0.05f; // measurement noise of range sensor, in meters
 
-    float sigma_baro_m = 0.8; // measurement noise of barometer, in meters 
+    float sigma_baro_m = 0.8; // measurement noise of barometer, in meters
 
     float baro_offset_m = 0.0f;
 
-    uint32_t last_imu_timestamp = 0;
-
-    bool propagate_core(const ImuData& imudata);
+    bool propagate_core(const ImuData &imudata);
     int get_closest_buf(uint32_t timestamp) const;
 
-    void correct_flow(const MTF02Data &flowdata, const StateBuffer& closest_buf);
-    void correct_range(const MTF02Data &flowdata, const StateBuffer& closest_buf);
+    void correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_buf);
+    void correct_range(const MTF02Data &flowdata, const StateBuffer &closest_buf);
     void replay_from(int buf_idx);
 
     // State buffering for delayed correction and delay
@@ -85,10 +84,11 @@ private:
     int buf_count = 0; // to keep track of initial when there is garbage data.
 
     int newest_buf_index() const;
-    void push_buffer(const ImuData& imudata);
+    void push_buffer(const ImuData &imudata);
 
 public:
     NominalState nominal;
+    uint32_t last_imu_timestamp = 0;
 
     float h_terrain = 0; // height of the terrain
     ESKF();

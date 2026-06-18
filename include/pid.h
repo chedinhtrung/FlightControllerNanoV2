@@ -77,8 +77,8 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(35.0f, 0.0f, 0.1e-4f, 1.0f, 0.0f);
-    PID vy_pid_l1 = PID(35.0f, 0.0f, 0.1e-4f, 1.0f, 0.0f);
+    PID vx_pid_l1 = PID(23.0f, 0.0f, 0.1e-4f, 1.0f, 0.0f);
+    PID vy_pid_l1 = PID(23.0f, 0.0f, 0.1e-4f, 1.0f, 0.0f);
 
     PID vx_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
     PID vy_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
@@ -193,7 +193,7 @@ public:
         roll_target = slewLimit(roll_target, last_roll, MAX_SLEW_DPS, DT);
 
         // feed forward term
-        constexpr float FFWD_DEG_PER_MPS = 3.0f;
+        constexpr float FFWD_DEG_PER_MPS = 4.0f;
         float pitch_fwd = -target_v.x * FFWD_DEG_PER_MPS; // each m/s target needs about 2.5 degs to MAINTAIN due to drag
         float roll_fwd = target_v.y * FFWD_DEG_PER_MPS;
 

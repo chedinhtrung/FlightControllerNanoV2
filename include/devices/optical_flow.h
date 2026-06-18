@@ -18,9 +18,6 @@ public:
     bool kick();
     bool has_bytes() const;
     bool read(MTF02Data &out);
-    
-    Vec3LPF gyro_lpf;
-    Vec3LPF flow_lpf;
 
 private:
     OpticalFlowDriver &driver_;

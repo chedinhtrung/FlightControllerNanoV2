@@ -1,4 +1,5 @@
 #include "main.h"
+#include "message_helpers.h"
 
 ICM42688P imu;
 Imu imu_device(imu);
@@ -119,6 +120,8 @@ void loop()
   eskf.propagate(imu_data);
   eskf.correct_gravity(imu_data.accel);
 
+  //debug::plot(Vec3{imu_data.gyro.y, static_cast<float>(mtf02_data.data.flow_x) * static_cast<float>(mtf02_data.data.dist_mm) * 1e-5f, 0});
+
   // debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
 
   update_optical_flow(800);
@@ -224,7 +227,7 @@ void loop()
     vxyz_cmd.C2 = vcmd_v1.x;
     vxyz_cmd.C4 = vcmd_v1.y;
 
-    debug::log(pos_error);
+    //debug::log(pos_error);
     //Serial.println("Position hold active");
   }
   else
@@ -298,6 +301,9 @@ void loop()
 
   // debug::plot(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
+  ESKFStatePayload pl = pack(eskf.nominal, eskf.last_imu_timestamp, eskf.h_terrain);
+  const uint8_t* pl_bytes = payload_bytes(pl);
+  rpi.write(RPiMessageType::STATE, pl_bytes, sizeof(pl));
 
   while (micros() - last_active < PERIOD_US)
   {
