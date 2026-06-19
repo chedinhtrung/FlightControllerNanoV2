@@ -76,12 +76,15 @@ public:
 
 class VelStabilizer
 {
+    // P = degrees of adjustment per m/s error
+    // I = degrees of adjustment per m/s times 1s
+    // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(25.0f, 1.7e-3f, 0.1e-4f, 1.0f, 0.0f);
-    PID vy_pid_l1 = PID(25.0f, 1.7e-3f, 0.1e-4f, 1.0f, 0.0f);
+    PID vx_pid_l1 = PID(25.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
+    PID vy_pid_l1 = PID(25.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
 
-    PID vx_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
-    PID vy_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
+    PID vx_pid_l2 = PID(25.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
+    PID vy_pid_l2 = PID(25.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
 
 public:
     inline float deadband_x(float x)
@@ -193,7 +196,7 @@ public:
         roll_target = slewLimit(roll_target, last_roll, MAX_SLEW_DPS, DT);
 
         // feed forward term
-        constexpr float FFWD_DEG_PER_MPS = 3.0f;
+        constexpr float FFWD_DEG_PER_MPS = 12.0f;
         float pitch_fwd = -target_v.x * FFWD_DEG_PER_MPS; // each m/s target needs about 2.5 degs to MAINTAIN due to drag
         float roll_fwd = target_v.y * FFWD_DEG_PER_MPS;
 
@@ -227,31 +230,14 @@ class PositionHoldController
 {
 private:
     float KP_POS = 1.0f; // m/s per m error
-    float MAX_V = 0.8f;  // m/s
+    float MAX_V = 0.5f;  // m/s
 
 public:
     Vec3 target;
     bool active = false;
     inline Vec3 vel_from_pos_error(const Vec3& pos_error)
     {
-
-        float dist = sqrt(dot(pos_error, pos_error));
-
-        float mult;
-
-        if (dist < 0.1f)
-        {
-            mult = 0.8f;
-        }
-        else if (dist < 0.4f)
-        {
-            float t = (dist - 0.1f) / 0.3f;
-            mult = 0.8f + t * (0.4f - 0.8f);
-        }
-        else
-        {
-            mult = 0.4f;
-        }
+    float mult = sqrtf(dot(pos_error, pos_error));        
 
         Vec3 v_cmd = pos_error * mult;
         v_cmd.x = constrain(v_cmd.x, -MAX_V, MAX_V);

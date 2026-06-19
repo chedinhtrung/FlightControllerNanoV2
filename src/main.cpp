@@ -1,4 +1,5 @@
 #include "main.h"
+#include "message_helpers.h"
 
 ICM42688P imu;
 Imu imu_device(imu);
@@ -64,7 +65,9 @@ void loop()
   }
 
   eskf.propagate(imu_data);
-  eskf.correct_gravity(imu_data.accel);
+  //eskf.correct_gravity(imu_data.accel);
+
+  //debug::plot(Vec3{imu_data.gyro.y, static_cast<float>(mtf02_data.data.flow_x) * static_cast<float>(mtf02_data.data.dist_mm) * 1e-5f, 0});
 
   // debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
 
