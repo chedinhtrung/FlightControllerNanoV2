@@ -35,8 +35,8 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.0004f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
-    PID x_rate_pid = PID(0.0005f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.0015f, 1e-4f, 1e-5f, 0.15f, 0.12f);
+    PID x_rate_pid = PID(0.0015f, 1e-4f, 1e-5f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
@@ -80,11 +80,11 @@ class VelStabilizer
     // I = degrees of adjustment per m/s times 1s
     // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(25.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
-    PID vy_pid_l1 = PID(25.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
+    PID vx_pid_l1 = PID(50.0f, 2.0f, 8e-1f, 4.0f, 3.0f);
+    PID vy_pid_l1 = PID(50.0f, 2.0f, 8e-1f, 4.0f, 3.0f);
 
-    PID vx_pid_l2 = PID(25.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
-    PID vy_pid_l2 = PID(25.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
+    PID vx_pid_l2 = PID(40.0f, 2.0f, 8e-1f, 4.0f, 4.0f);
+    PID vy_pid_l2 = PID(40.0f, 2.0f, 8e-1f, 4.0f, 4.0f);
 
 public:
     inline float deadband_x(float x)
@@ -171,8 +171,8 @@ public:
         static float last_pitch = 0.0f;
         static float last_roll = 0.0f;
 
-        v_error.x = deadband_x(v_error.x);
-        v_error.y = deadband_y(v_error.y);
+        //v_error.x = deadband_x(v_error.x);
+        //v_error.y = deadband_y(v_error.y);
 
         // Blend factor: 0 = low-error PID, 1 = high-error PID
         float tx = constrain(fabsf(v_error.x) / SWITCH_VEL, 0.0f, 1.0f);
@@ -214,7 +214,7 @@ public:
 class VzStabilizer
 {
 private:
-    PID vz_pid = PID(0.30, 2e-2f, 0.0f, 0.05f, 0.05f);
+    PID vz_pid = PID(0.30, 6e-2f, 0.05f, 0.05f, 0.05f);
 
 public:
     inline float thrust_adjust_from_vz_error(float vz_error)
@@ -231,19 +231,36 @@ class PositionHoldController
 private:
     float KP_POS = 1.0f; // m/s per m error
     float MAX_V = 0.5f;  // m/s
-
+    // PID: m/s per m error
 public:
     Vec3 target;
     bool active = false;
     inline Vec3 vel_from_pos_error(const Vec3& pos_error)
     {
-    float mult = sqrtf(dot(pos_error, pos_error));        
+    float mult = dot(pos_error, pos_error);        
 
-        Vec3 v_cmd = pos_error * mult;
+        Vec3 v_cmd = pos_error * mult + pos_error * 0.02;
         v_cmd.x = constrain(v_cmd.x, -MAX_V, MAX_V);
         v_cmd.y = constrain(v_cmd.y, -MAX_V, MAX_V);            
         
         return v_cmd;
+    }
+};
+
+class AltHoldController
+{
+private:
+    float KP_POS = 1.0f; // m/s per m error
+    float MAX_V = 1.0f;  // m/s
+
+public:
+    float target;
+    bool active = false;
+    inline float vz_from_z_error(const float z_error)
+    {
+        float vz_cmd = -2.5 * z_error;
+        vz_cmd = constrain(vz_cmd, -MAX_V, MAX_V);
+        return vz_cmd;
     }
 };
 #endif

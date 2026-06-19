@@ -31,6 +31,7 @@ VelStabilizer vxy_stabilizer = VelStabilizer();
 VzStabilizer vz_stabilizer = VzStabilizer();
 
 PositionHoldController pos_hold_controller = PositionHoldController();
+AltHoldController alt_hold_controller = AltHoldController();
 
 ESKF eskf = ESKF();
 
@@ -118,7 +119,7 @@ void loop()
   }
 
   eskf.propagate(imu_data);
-  //eskf.correct_gravity(imu_data.accel);
+  eskf.correct_gravity(imu_data.accel);
 
   //debug::plot(Vec3{imu_data.gyro.y, static_cast<float>(mtf02_data.data.flow_x) * static_cast<float>(mtf02_data.data.dist_mm) * 1e-5f, 0});
 
@@ -171,7 +172,7 @@ void loop()
       flightstate == DISARMED ||
       flightstate == ARMED;
 
-  const bool manual_attitude =
+  const bool manual_attitude = 
       flightmode == ANGLE ||
       flightstate == DISARMED ||
       flightstate == ARMED ||
@@ -201,6 +202,8 @@ void loop()
     pos_hold_controller.target = eskf.nominal.p;
   }
   
+  // position holding 
+  
   if (fabsf(vxyz_cmd.C2) <= 0.05f && fabsf(vxyz_cmd.C4) <= 0.05f)
   {
     if (!pos_hold_controller.active)
@@ -210,12 +213,6 @@ void loop()
     }
 
     Vec3 pos_error = pos_hold_controller.target - eskf.nominal.p;
-
-    if (dot(pos_error, pos_error) < 0.0004f)
-    {
-      pos_error = {0.0f, 0.0f, 0.0f};
-    }
-
    
     Vec3 pos_error_v1{
         cosf(e.yaw) * pos_error.x + sy * pos_error.y,
@@ -233,6 +230,21 @@ void loop()
   else
   {
     pos_hold_controller.active = false;
+  }
+
+  // alt holding
+  if (fabsf(vxyz_cmd.C3) <= 0.05f){
+    if (!alt_hold_controller.active)
+    {
+      alt_hold_controller.active = true;
+      alt_hold_controller.target = eskf.nominal.p.z;
+    }
+    float vz = alt_hold_controller.vz_from_z_error(eskf.nominal.p.z - alt_hold_controller.target);
+    vxyz_cmd.C3 = vz;
+  }
+  else
+  {
+    alt_hold_controller.active = false;
   }
 
   EulerAngle angle_target{};
