@@ -77,8 +77,8 @@ public:
 class VelStabilizer
 {
 
-    PID vx_pid_l1 = PID(23.0f, 0.0f, 0.1e-4f, 1.0f, 0.0f);
-    PID vy_pid_l1 = PID(23.0f, 0.0f, 0.1e-4f, 1.0f, 0.0f);
+    PID vx_pid_l1 = PID(23.0f, 1.5e-3f, 0.1e-3f, 1.0f, 1.0f);
+    PID vy_pid_l1 = PID(23.0f, 1.5e-3f, 0.1e-3f, 1.0f, 1.0f);
 
     PID vx_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
     PID vy_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
