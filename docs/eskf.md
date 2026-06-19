@@ -179,11 +179,11 @@ Reset is trivial according to Sola.
 `correct_gravity()` uses normalized accelerometer direction as a gravity-direction measurement:
 
 - Predicted direction in body frame: 
-$$h(q) = q^* \otimes f_w \otimes q$$
+$$h(q) = q^* \otimes (-g + a_b) \otimes q$$
 
-with $f_w=[0,0,-1]^\top$
+with $g=[0,0,-9.81]^\top$
 - Residual: $r=z-h$
-- Jacobian uses attitude-error block only: $H_{\theta}= [h(q)]_\times$
+- Jacobian: $H_{\theta}= [h(q)]_\times$, $H_{ab} = R^T(q)$
 
 Here H is computed directly, it skips the chain-rule in Joan Sola's p.63 eq. 278. 
 
@@ -191,26 +191,32 @@ Justification:
 Let 
 
 $$
- h(q) = R(q)^T \ \exp(\delta \theta) f_w
+ h(q) = R(q)^T (-g + a_b)
 $$
 
-be the acceleration in $g$ that we predict to measure in the body frame where $q$ is our nominal state quaternion and $\delta \theta$ is our error state. 
+be the acceleration that we predict to measure in the body frame where $q$ is our nominal state quaternion. 
 
 Pertube it with small angle $\delta \theta$ we get the true measurement (that the accel reads):
 
-$$h(q_t) = (R(q) \ \exp(\delta \theta))^T \ f_w = \exp(\delta \theta)^TR(q)^Tfw
+$$h(q_t) = (R(q) \ \exp(\delta \theta))^T \ f_w = \exp(\delta \theta)^TR(q)^T(g + a_b)
 $$
 
 Now assume that for small $\delta\theta$, we have $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get
 
-$$H_\theta = \frac{\partial h(q_t)}{\partial \delta \theta} = \frac{\partial }{\partial \delta \theta} \  (I + [\delta \theta]_\times)^T \ R(q)^T \ f_w \\ 
-= \frac{\partial }{\partial \delta \theta} \ -[\delta \theta]_\times \ R(q)^T  \ f_w = [R(q)^T \ f_w]_\times \ \delta \theta \\
-= [R(q)^T [f_w]]_\times = [h(q)]_\times
+$$H_\theta = \frac{\partial h(q_t)}{\partial \delta \theta} = \frac{\partial }{\partial \delta \theta} \  (I + [\delta \theta]_\times)^T \ R(q)^T \ (g + a_b) \\ 
+= \frac{\partial }{\partial \delta \theta} \ -[\delta \theta]_\times \ R(q)^T  \ (g + a_b) = [R(q)^T \ (g + a_b)]_\times \ \delta \theta \\
+= [R(q)^T (g + a_b)]_\times = [h(q)]_\times
+$$
+
+similarly, pertube $a_b$ with $\delta a_b$ we get
+
+$$H_{ab} = \frac{\partial h(q_t)}{\partial \delta a_b} = \frac{\partial }{\partial \delta a_b} \ R(q)^T \ (g + a_b +\delta a_b) \\ 
+= R(q)^T
 $$
 
 So that the final $H$ is 
 $$
-H = \begin{bmatrix}0 & 0 & H_\theta & 0 & 0\end{bmatrix}
+H = \begin{bmatrix}0 & 0 & H_\theta & H_{ab} & 0\end{bmatrix}
 $$
 
 This means we should also compute $K$ and $P$ blockwise to save computation time.

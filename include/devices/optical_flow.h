@@ -68,7 +68,7 @@ inline Vec3WithTrust get_raw_flow_with_trust(const MTF02Data &flowdata, Vec3 gyr
     q_norm = constrain(q_norm, 0.0f, 1.0f);
 
     // Low quality = low confidence = high scale
-    float quality_scale = 1.0f / (0.70f + 0.30f * q_norm);
+    float quality_scale = 1.0f / (0.80f + 0.20f * q_norm);
 
     constexpr float FULL_TRUST_H = 2.0f;
     constexpr float WEAK_TRUST_H = 4.0f;
@@ -88,7 +88,7 @@ inline Vec3WithTrust get_raw_flow_with_trust(const MTF02Data &flowdata, Vec3 gyr
     // Per-axis gyro confidence.
     // Keep this moderate because ESKF already models rotation-induced flow.
     // x-flow is mainly affected by body y-rate; y-flow by body x-rate.
-    constexpr float GYRO_REF = 3.2f;        // rad/s
+    constexpr float GYRO_REF = 2.2f;        // rad/s
     constexpr float GYRO_NOISE_GAIN = 1.5f;
     constexpr float MAX_GYRO_SCALE = 2.0f;
 

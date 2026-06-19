@@ -80,11 +80,11 @@ class VelStabilizer
     // I = degrees of adjustment per m/s times 1s
     // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(23.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
-    PID vy_pid_l1 = PID(23.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
+    PID vx_pid_l1 = PID(25.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
+    PID vy_pid_l1 = PID(25.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
 
-    PID vx_pid_l2 = PID(23.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
-    PID vy_pid_l2 = PID(23.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
+    PID vx_pid_l2 = PID(25.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
+    PID vy_pid_l2 = PID(25.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
 
 public:
     inline float deadband_x(float x)
@@ -241,19 +241,20 @@ public:
         float dist = sqrt(dot(pos_error, pos_error));
 
         float mult;
-
-        if (dist < 0.1f)
+        if (dist < 0.05){
+            mult = 0.0f;
+        }
+        else if (dist < 0.1f)
         {
             mult = 0.2f;
         }
         else if (dist < 0.4f)
         {
-            float t = (dist - 0.1f) / 0.3f;
-            mult = 0.2f + t * 0.4f;
+            mult = 0.5;
         }
         else
         {
-            mult = 0.6f;
+            mult = 0.4f;
         }
 
         Vec3 v_cmd = pos_error * mult;
