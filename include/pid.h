@@ -76,12 +76,15 @@ public:
 
 class VelStabilizer
 {
+    // P = degrees of adjustment per m/s error
+    // I = degrees of adjustment per m/s times 1s
+    // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(23.0f, 1.5e-3f, 0.1e-3f, 1.0f, 1.0f);
-    PID vy_pid_l1 = PID(23.0f, 1.5e-3f, 0.1e-3f, 1.0f, 1.0f);
+    PID vx_pid_l1 = PID(23.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
+    PID vy_pid_l1 = PID(23.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
 
-    PID vx_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
-    PID vy_pid_l2 = PID(35.0f, 0.0f, 0.6e-4f, 0.0f, 1.5f);
+    PID vx_pid_l2 = PID(23.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
+    PID vy_pid_l2 = PID(23.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
 
 public:
     inline float deadband_x(float x)
@@ -193,7 +196,7 @@ public:
         roll_target = slewLimit(roll_target, last_roll, MAX_SLEW_DPS, DT);
 
         // feed forward term
-        constexpr float FFWD_DEG_PER_MPS = 4.0f;
+        constexpr float FFWD_DEG_PER_MPS = 12.0f;
         float pitch_fwd = -target_v.x * FFWD_DEG_PER_MPS; // each m/s target needs about 2.5 degs to MAINTAIN due to drag
         float roll_fwd = target_v.y * FFWD_DEG_PER_MPS;
 
