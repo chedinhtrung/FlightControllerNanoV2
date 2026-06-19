@@ -230,32 +230,14 @@ class PositionHoldController
 {
 private:
     float KP_POS = 1.0f; // m/s per m error
-    float MAX_V = 0.8f;  // m/s
+    float MAX_V = 0.5f;  // m/s
 
 public:
     Vec3 target;
     bool active = false;
     inline Vec3 vel_from_pos_error(const Vec3& pos_error)
     {
-
-        float dist = sqrt(dot(pos_error, pos_error));
-
-        float mult;
-        if (dist < 0.05){
-            mult = 0.0f;
-        }
-        else if (dist < 0.1f)
-        {
-            mult = 0.2f;
-        }
-        else if (dist < 0.4f)
-        {
-            mult = 0.5;
-        }
-        else
-        {
-            mult = 0.4f;
-        }
+    float mult = sqrtf(dot(pos_error, pos_error));        
 
         Vec3 v_cmd = pos_error * mult;
         v_cmd.x = constrain(v_cmd.x, -MAX_V, MAX_V);
