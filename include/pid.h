@@ -35,7 +35,7 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.001f, 1e-4f, 1.5e-5f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.0009f, 1e-4f, 1.8e-5f, 0.15f, 0.12f);
     PID x_rate_pid = PID(0.001f, 1e-4f, 1.5e-5f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 
@@ -59,11 +59,11 @@ class VelStabilizer
     // I = degrees of adjustment per m/s times 1s
     // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(15.0f, 4.0f, 3e-1f, 4.0f, 2.0f);
-    PID vy_pid_l1 = PID(15.0f, 4.0f, 3e-1f, 4.0f, 2.0f);
+    PID vx_pid_l1 = PID(20.0f, 4.0f, 4e-1f, 4.0f, 2.0f);
+    PID vy_pid_l1 = PID(20.0f, 4.0f, 4e-1f, 4.0f, 2.0f);
 
-    PID vx_pid_l2 = PID(30.0f, 0.0f, 6e-1f, 4.0f, 5.0f);
-    PID vy_pid_l2 = PID(30.0f, 0.0f, 6e-1f, 4.0f, 5.0f);
+    PID vx_pid_l2 = PID(35.0f, 0.0f, 7e-1f, 4.0f, 5.0f);
+    PID vy_pid_l2 = PID(35.0f, 0.0f, 7e-1f, 4.0f, 5.0f);
 
 public:
 
@@ -166,7 +166,6 @@ public:
 class PositionHoldController
 {
 private:
-    float KP_POS = 1.0f; // m/s per m error
     float MAX_V = 0.8f;  // m/s
     // PID: m/s per m error
 public:
@@ -175,8 +174,12 @@ public:
     inline Vec3 vel_from_pos_error(const Vec3& pos_error)
     {
         float ep = sqrt(dot(pos_error, pos_error));
+        float mult = 0.5f;
+        if (ep < 0.25){
+            mult = 0.9f;
+        }
 
-        Vec3 v_cmd = pos_error * ep + pos_error * 0.15;
+        Vec3 v_cmd = pos_error * mult;
         v_cmd.x = constrain(v_cmd.x, -MAX_V, MAX_V);
         v_cmd.y = constrain(v_cmd.y, -MAX_V, MAX_V);            
         
