@@ -35,8 +35,8 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.0004f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
-    PID x_rate_pid = PID(0.0005f, 0.8e-4f, 2.5e-7f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.0009f, 1e-4f, 1.8e-5f, 0.15f, 0.12f);
+    PID x_rate_pid = PID(0.001f, 1e-4f, 1.5e-5f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
@@ -44,29 +44,8 @@ public:
 
     inline float angle_error_to_angle_rate(float angle)
     {
-        float a = fabsf(angle);
-
-        float mult;
-
-        if (a < 4.0f)
-        {
-            mult = 1.5f;
-        }
-        else if (a < 8.0f)
-        {
-            float t = (a - 4.0f) / 4.0f;
-            mult = 1.5f + t * (4.0f - 1.5f);
-        }
-        else if (a < 15.0f)
-        {
-            float t = (a - 8.0f) / 7.0f;
-            mult = 4.0f + t * (2.0f - 4.0f);
-        }
-        else
-        {
-            mult = 2.0f;
-        }
-
+        
+        constexpr float mult = 5.0f;
         float rate = angle * mult;
 
         constexpr float MAX_RATE_DPS = 120.0f;
@@ -80,58 +59,13 @@ class VelStabilizer
     // I = degrees of adjustment per m/s times 1s
     // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(25.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
-    PID vy_pid_l1 = PID(25.0f, 4.0f, 0.2e-2f, 4.0f, 3.0f);
+    PID vx_pid_l1 = PID(20.0f, 4.0f, 4e-1f, 4.0f, 2.0f);
+    PID vy_pid_l1 = PID(20.0f, 4.0f, 4e-1f, 4.0f, 2.0f);
 
-    PID vx_pid_l2 = PID(25.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
-    PID vy_pid_l2 = PID(25.0f, 4.0f, 0.7e-1f, 4.0f, 4.0f);
+    PID vx_pid_l2 = PID(35.0f, 0.0f, 7e-1f, 4.0f, 5.0f);
+    PID vy_pid_l2 = PID(35.0f, 0.0f, 7e-1f, 4.0f, 5.0f);
 
 public:
-    inline float deadband_x(float x)
-    {
-        constexpr float DB_ENTER = 0.01f;
-        constexpr float DB_EXIT = 0.02f;
-
-        static bool in_deadband = true;
-
-        const float ax = fabsf(x);
-
-        if (in_deadband)
-        {
-            if (ax > DB_EXIT)
-                in_deadband = false;
-        }
-        else
-        {
-            if (ax < DB_ENTER)
-                in_deadband = true;
-        }
-
-        return in_deadband ? 0.0f : x;
-    }
-
-    inline float deadband_y(float y)
-    {
-        constexpr float DB_ENTER = 0.01f;
-        constexpr float DB_EXIT = 0.02f;
-
-        static bool in_deadband = true;
-
-        const float ax = fabsf(y);
-
-        if (in_deadband)
-        {
-            if (ax > DB_EXIT)
-                in_deadband = false;
-        }
-        else
-        {
-            if (ax < DB_ENTER)
-                in_deadband = true;
-        }
-
-        return in_deadband ? 0.0f : y;
-    }
 
     inline float velHoldAuthorityFromHeight(float h_m)
     {
@@ -161,18 +95,22 @@ public:
         return current + delta;
     }
 
+    inline float applyDeadband(float value, float band)
+    {
+        const float abs_value = fabsf(value);
+        if (abs_value <= band)
+        {
+            return 0.0f;
+        }
+
+        return copysignf(abs_value - band, value);
+    }
+
     inline EulerAngle vxy_error_to_angle_target(Vec3 target_v, Vec3 v_error, float yawrate)
     {
-        constexpr float VEL_DEADBAND = 0.06f;
-        constexpr float SWITCH_VEL = 0.15f;
+        constexpr float VEL_DEADBAND = 0.02f;
+        constexpr float SWITCH_VEL = 0.20f;
         constexpr float MAX_ANGLE = 25.0f;
-        constexpr float MAX_SLEW_DPS = 70.0f;
-
-        static float last_pitch = 0.0f;
-        static float last_roll = 0.0f;
-
-        v_error.x = deadband_x(v_error.x);
-        v_error.y = deadband_y(v_error.y);
 
         // Blend factor: 0 = low-error PID, 1 = high-error PID
         float tx = constrain(fabsf(v_error.x) / SWITCH_VEL, 0.0f, 1.0f);
@@ -192,21 +130,20 @@ public:
         pitch_target = constrain(pitch_target, -MAX_ANGLE, MAX_ANGLE);
         roll_target = constrain(roll_target, -MAX_ANGLE, MAX_ANGLE);
 
-        pitch_target = slewLimit(pitch_target, last_pitch, MAX_SLEW_DPS, DT);
-        roll_target = slewLimit(roll_target, last_roll, MAX_SLEW_DPS, DT);
-
         // feed forward term
-        constexpr float FFWD_DEG_PER_MPS = 12.0f;
+        constexpr float FFWD_DEG_PER_MPS = 3.0f;
         float pitch_fwd = -target_v.x * FFWD_DEG_PER_MPS; // each m/s target needs about 2.5 degs to MAINTAIN due to drag
         float roll_fwd = target_v.y * FFWD_DEG_PER_MPS;
 
-        last_pitch = pitch_target;
-        last_roll = roll_target;
+        float pitch_cmd = -pitch_target + pitch_fwd;
+        float roll_cmd = roll_target + roll_fwd;
+        
 
         return EulerAngle{
             yawrate,
-            -pitch_target + pitch_fwd,
-            roll_target + roll_fwd};
+            constrain(pitch_cmd, -20,20),
+            constrain(roll_cmd, -20,20)
+        };
     }
     void reset();
 };
@@ -214,7 +151,7 @@ public:
 class VzStabilizer
 {
 private:
-    PID vz_pid = PID(0.30, 2e-2f, 0.0f, 0.05f, 0.05f);
+    PID vz_pid = PID(0.30, 6e-2f, 0.05f, 0.05f, 0.05f);
 
 public:
     inline float thrust_adjust_from_vz_error(float vz_error)
@@ -229,21 +166,41 @@ public:
 class PositionHoldController
 {
 private:
-    float KP_POS = 1.0f; // m/s per m error
-    float MAX_V = 0.5f;  // m/s
-
+    float MAX_V = 0.8f;  // m/s
+    // PID: m/s per m error
 public:
     Vec3 target;
     bool active = false;
     inline Vec3 vel_from_pos_error(const Vec3& pos_error)
     {
-    float mult = sqrtf(dot(pos_error, pos_error));        
+        float ep = sqrt(dot(pos_error, pos_error));
+        float mult = 0.5f;
+        if (ep < 0.25){
+            mult = 0.9f;
+        }
 
         Vec3 v_cmd = pos_error * mult;
         v_cmd.x = constrain(v_cmd.x, -MAX_V, MAX_V);
         v_cmd.y = constrain(v_cmd.y, -MAX_V, MAX_V);            
         
         return v_cmd;
+    }
+};
+
+class AltHoldController
+{
+private:
+    float KP_POS = 1.0f; // m/s per m error
+    float MAX_V = 1.0f;  // m/s
+
+public:
+    float target;
+    bool active = false;
+    inline float vz_from_z_error(const float z_error)
+    {
+        float vz_cmd = -2.5 * z_error;
+        vz_cmd = constrain(vz_cmd, -MAX_V, MAX_V);
+        return vz_cmd;
     }
 };
 #endif
