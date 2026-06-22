@@ -279,15 +279,14 @@ void ESKF::correct_gravity(const Vec3 &accel)
         trust = 1.0f - t;
     }
 
-    const Vec3 g = Vec3{0,0,G_EARTH_MPS2};
-    const Vec3 h = nominal.q.T() * (nominal.ab - g) * nominal.q;
+    const Vec3 g = Vec3{0,0,-G_EARTH_MPS2};
+    const Vec3 h = nominal.q.T() * (g) * nominal.q + nominal.ab;
 
     const Vec3 r = accel * G_EARTH_MPS2 - h;
 
     // H = [0 0 Htheta Hab 0] (observation assumed to only depend on orientation)
     // Optimized for blockwise update. This mess is doing K = HP(HPH^T + V)⁻1 + KVK^T
     BLA::Matrix<3, 3> Htheta = skewSymmetric(h);
-    BLA::Matrix<3,3> Hab = quatToRotMat(nominal.q.T());
 
     const float sigma = sigma_an_mps2 * 1.2 / constrain(trust, 0.1f, 1.0f);
 
@@ -300,10 +299,10 @@ void ESKF::correct_gravity(const Vec3 &accel)
     // H = [0 0 Htheta Hab 0]
 
     BLA::Matrix<15, 3> PHt =
-        P.Submatrix<15, 3>(0, 6) * ~Htheta +  P.Submatrix<15, 3>(0, 9) * ~Hab; // PHt = P * H.T = P[:, theta] * Htheta.T
+        P.Submatrix<15, 3>(0, 6) * ~Htheta +  P.Submatrix<15, 3>(0, 9); // PHt = P * H.T = P[:, theta] * Htheta.T
 
     BLA::Matrix<3, 3> S =
-        Htheta * PHt.Submatrix<3, 3>(6, 0) + Hab * PHt.Submatrix<3, 3>(9, 0)  + V; // S = H * PHt + V = Htheta * PHt[theta, :] + V
+        Htheta * PHt.Submatrix<3, 3>(6, 0) + PHt.Submatrix<3, 3>(9, 0)  + V; // S = H * PHt + V = Htheta * PHt[theta, :] + V
 
     BLA::Matrix<3, 3> S_inv = Inverse(S);
     BLA::Matrix<15, 3> K = PHt * S_inv;
@@ -313,7 +312,7 @@ void ESKF::correct_gravity(const Vec3 &accel)
 
     // Optimized for blockwise update. This mess is doing P = (I-KH) P (I-KH)^T + KVK^T
     BLA::Matrix<15, 15> KHP =
-        K * (Htheta * P.Submatrix<3, 15>(6, 0) + Hab * P.Submatrix<3, 15>(9, 0)); // KHP = K * H * P = K * Htheta * P[theta, :]
+        K * (Htheta * P.Submatrix<3, 15>(6, 0) + P.Submatrix<3, 15>(9, 0)); // KHP = K * H * P = K * Htheta * P[theta, :]
 
     P = P - KHP - ~KHP + K * S * ~K; // P = P - KHP - KHP.T + KSK.T
     P = (P + ~P) * 0.5f;             // Enforce symmetric covariance
@@ -323,7 +322,8 @@ void ESKF::correct_gravity(const Vec3 &accel)
     // intentionally make this correction only about attitude, not about position / vel
     //e.dp = Vec3{0, 0, 0};
     //e.dv = Vec3{0, 0, 0};
-    //e.dab = Vec3{0, 0, 0};
+    // disable ab correction, since linear acceleration can look like accel bias.
+    e.dab = Vec3{0, 0, 0};
 
     inject(e);
 }
@@ -927,7 +927,7 @@ void ESKF::replay_from(int buf_idx)
 
         if (propagate_core(state_buf[next].imudata))
         {
-            correct_gravity(state_buf[next].imudata.accel);
+            //correct_gravity(state_buf[next].imudata.accel);
             state_buf[next].state = nominal;
             state_buf[next].P = P;
             state_buf[next].timestamp = state_buf[next].imudata.timestamp;
