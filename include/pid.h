@@ -174,9 +174,9 @@ public:
     inline Vec3 vel_from_pos_error(const Vec3& pos_error)
     {
         float ep = sqrt(dot(pos_error, pos_error));
-        float mult = 0.5f;
+        float mult = 0.6f;
         if (ep < 0.25){
-            mult = 0.9f;
+            mult = 0.25f;
         }
 
         Vec3 v_cmd = pos_error * mult;
