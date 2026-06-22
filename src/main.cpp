@@ -5,9 +5,12 @@ ICM42688P imu;
 Imu imu_device(imu);
 ImuData imu_data;
 
-PPMReceiver ppm_receiver = PPMReceiver();
+PPMReceiver ppm_receiver;
 Receiver receiver(ppm_receiver);
 PPMCommand control_raw;
+
+Motor motor;
+MotorDevice motor_device(motor);
 
 unsigned long last_active = micros();
 
@@ -26,6 +29,8 @@ StateMachine statemachine = StateMachine();
 void setup()
 {
   Serial.begin(115200);
+
+  motor_device.write(0.0f, 0.0f, 0.0f, 0.0f);
 
   delay(5000);
   if (!imu_device.setup())
@@ -70,7 +75,7 @@ void loop()
 
   //debug::plot(Vec3{imu_data.gyro.y, static_cast<float>(mtf02_data.data.flow_x) * static_cast<float>(mtf02_data.data.dist_mm) * 1e-5f, 0});
 
-  debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
+  //debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
 
   // debug::log(imu_data.accel, "accel(g)");
 
@@ -81,8 +86,15 @@ void loop()
 
   }
   else {
-    //debug::log(cmd_raw, "cmd_raw");
+    PPMCommand rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
+    PPMCommand vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
+
+    debug::log(rpy_cmd.C3, "Throttle");
+    motor.set_motor_raw((uint16_t)1024, (uint16_t)1024,(uint16_t)1400,(uint16_t)1024);
   }
+
+
+ 
 
   while (micros() - last_active < PERIOD_US)
   {
