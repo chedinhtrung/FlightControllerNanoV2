@@ -1,14 +1,14 @@
 {
   "build": {
     "arduino": {
-      "variant_h": "variant_WeActMiniH7xx.h"
+      "variant_h": "variant_DakeFPVH743.h"
     },
     "core": "stm32",
     "cpu": "cortex-m7",
     "extra_flags": "-DSTM32H743xx",
     "f_cpu": "480000000L",
     "framework_extra_flags": {
-      "arduino": "-DARDUINO_WeActMiniH743VITX -DCUSTOM_PERIPHERAL_PINS"
+      "arduino": "-DARDUINO_DakeFPVH743 -DCUSTOM_PERIPHERAL_PINS"
     },
     "mcu": "stm32h743vit6",
     "product_line": "STM32H743xx",

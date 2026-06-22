@@ -70,7 +70,7 @@ void loop()
 
   //debug::plot(Vec3{imu_data.gyro.y, static_cast<float>(mtf02_data.data.flow_x) * static_cast<float>(mtf02_data.data.dist_mm) * 1e-5f, 0});
 
-  // debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
+  debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
 
   // debug::log(imu_data.accel, "accel(g)");
 
@@ -81,7 +81,7 @@ void loop()
 
   }
   else {
-    debug::log(cmd_raw, "cmd_raw");
+    //debug::log(cmd_raw, "cmd_raw");
   }
 
   while (micros() - last_active < PERIOD_US)

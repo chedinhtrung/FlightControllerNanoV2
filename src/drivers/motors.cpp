@@ -1,35 +1,48 @@
 #include "drivers/motors.h"
 
-namespace {
-inline float clamp01(float v) {
-    if (v < 0.0f) return 0.0f;
-    if (v > 1.0f) return 1.0f;
-    return v;
+namespace
+{
+    inline float clamp01(float v)
+    {
+        if (v < 0.0f)
+            return 0.0f;
+        if (v > 1.0f)
+            return 1.0f;
+        return v;
+    }
+
+    inline int motor_float_to_raw(float m)
+    {
+        // 12-bit write: 1024..2047 maps to approx 1000us..2000us style ESC range.
+        return (int)(m * 1023.0f + 1024.0f);
+    }
 }
 
-inline int motor_float_to_raw(float m) {
-    // 12-bit write: 1024..2047 maps to approx 1000us..2000us style ESC range.
-    return (int)(m * 1023.0f + 1024.0f);
-}
-}
-
-Motor::Motor() {
+Motor::Motor()
+{
+    // min OneShot125: 125 us
+    Serial.println("Setting up Motor");
     pinMode(FL, OUTPUT);
     pinMode(FR, OUTPUT);
     pinMode(BL, OUTPUT);
     pinMode(BR, OUTPUT);
     analogWriteResolution(12);
     analogWriteFrequency(2000);
+
+    set_motor_raw(1024, 1024, 1024, 1024);
+    
 }
 
-void Motor::set_motor_raw(int fl, int fr, int bl, int br) {
+void Motor::set_motor_raw(int fl, int fr, int bl, int br)
+{
     analogWrite(FL, fl);
     analogWrite(FR, fr);
     analogWrite(BL, bl);
     analogWrite(BR, br);
 }
 
-void Motor::set_motor(const MotorCommand &cmd) {
+void Motor::set_motor(const MotorCommand &cmd)
+{
     /*
         FrontLeft  ---- ^^^^^^ ---- FrontRight
 

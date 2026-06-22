@@ -17,7 +17,9 @@
  * STM32H753VIHx.xml, STM32H753VITx.xml
  * CubeMX DB release 6.0.30
  */
-#if defined(ARDUINO_WeActMiniH743VITX) || defined(ARDUINO_WeActMiniH750VBTX)
+
+#if defined(ARDUINO_DakeFPVH743)
+#warning "USING PeripheralPins_ DAKEFPVH743.c"
 #include "Arduino.h"
 #include "PeripheralPins.h"
 

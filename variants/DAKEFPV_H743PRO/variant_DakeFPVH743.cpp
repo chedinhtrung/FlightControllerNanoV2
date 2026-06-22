@@ -11,8 +11,9 @@
  *******************************************************************************
  */
 
-#if defined(ARDUINO_WeActMiniH743VITX) || defined(ARDUINO_WeActMiniH750VBTX)
+#if defined(ARDUINO_DakeFPVH743)
 #include "pins_arduino.h"
+#warning "USING variant_DakeFPVH743"
 
 // Digital PinName array
 const PinName digitalPin[] = {
