@@ -35,7 +35,7 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.0001f, 1e-4f, 1.0e-5f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.001f, 1e-4f, 1.0e-5f, 0.15f, 0.12f);
     PID x_rate_pid = PID(0.001f, 1e-4f, 1.0e-5f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 

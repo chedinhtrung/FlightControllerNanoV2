@@ -279,16 +279,19 @@ void ESKF::correct_gravity(const Vec3 &accel)
         trust = 1.0f - t;
     }
 
-    const Vec3 g = Vec3{0,0,-G_EARTH_MPS2};
-    const Vec3 h = nominal.q.T() * (g) * nominal.q + nominal.ab;
+    const Vec3 z = accel * (1.0f / acc_norm);
 
-    const Vec3 r = accel * G_EARTH_MPS2 - h;
+    const Vec3 f_world{0.0f, 0.0f, -1.0f};
+    const Vec3 h = nominal.q.T() * f_world * nominal.q;
 
-    // H = [0 0 Htheta Hab 0] (observation assumed to only depend on orientation)
+    const Vec3 r = z - h;
+
+    // H = [0 0 Htheta 0 0] (observation assumed to only depend on orientation)
+    // In reality it also needs ab (accel bias). Suggestion for further improvement
     // Optimized for blockwise update. This mess is doing K = HP(HPH^T + V)⁻1 + KVK^T
     BLA::Matrix<3, 3> Htheta = skewSymmetric(h);
 
-    const float sigma = sigma_an_mps2 * 1.2 / constrain(trust, 0.1f, 1.0f);
+    const float sigma = gravity_direction_sigma / constrain(trust, 0.1f, 1.0f);
 
     BLA::Matrix<3, 3> V;
     V.Fill(0.0f);
@@ -296,13 +299,13 @@ void ESKF::correct_gravity(const Vec3 &accel)
     V(1, 1) = sigma * sigma;
     V(2, 2) = sigma * sigma;
 
-    // H = [0 0 Htheta Hab 0]
+    // H = [0 0 Htheta 0 0]
 
     BLA::Matrix<15, 3> PHt =
-        P.Submatrix<15, 3>(0, 6) * ~Htheta +  P.Submatrix<15, 3>(0, 9); // PHt = P * H.T = P[:, theta] * Htheta.T
+        P.Submatrix<15, 3>(0, 6) * ~Htheta; // PHt = P * H.T = P[:, theta] * Htheta.T
 
     BLA::Matrix<3, 3> S =
-        Htheta * PHt.Submatrix<3, 3>(6, 0) + PHt.Submatrix<3, 3>(9, 0)  + V; // S = H * PHt + V = Htheta * PHt[theta, :] + V
+        Htheta * PHt.Submatrix<3, 3>(6, 0) + V; // S = H * PHt + V = Htheta * PHt[theta, :] + V
 
     BLA::Matrix<3, 3> S_inv = Inverse(S);
     BLA::Matrix<15, 3> K = PHt * S_inv;
@@ -312,7 +315,7 @@ void ESKF::correct_gravity(const Vec3 &accel)
 
     // Optimized for blockwise update. This mess is doing P = (I-KH) P (I-KH)^T + KVK^T
     BLA::Matrix<15, 15> KHP =
-        K * (Htheta * P.Submatrix<3, 15>(6, 0) + P.Submatrix<3, 15>(9, 0)); // KHP = K * H * P = K * Htheta * P[theta, :]
+        K * Htheta * P.Submatrix<3, 15>(6, 0); // KHP = K * H * P = K * Htheta * P[theta, :]
 
     P = P - KHP - ~KHP + K * S * ~K; // P = P - KHP - KHP.T + KSK.T
     P = (P + ~P) * 0.5f;             // Enforce symmetric covariance
@@ -320,9 +323,8 @@ void ESKF::correct_gravity(const Vec3 &accel)
     ErrorState e = unpack_error(dx);
 
     // intentionally make this correction only about attitude, not about position / vel
-    //e.dp = Vec3{0, 0, 0};
-    //e.dv = Vec3{0, 0, 0};
-    // disable ab correction, since linear acceleration can look like accel bias.
+    e.dp = Vec3{0, 0, 0};
+    e.dv = Vec3{0, 0, 0};
     e.dab = Vec3{0, 0, 0};
 
     inject(e);
