@@ -29,8 +29,7 @@ Motor::Motor()
     analogWriteResolution(12);
     analogWriteFrequency(2000);
 
-    set_motor_raw(1024, 1024, 1024, 1024);
-    
+    set_motor_raw(0, 0, 0, 0);
 }
 
 void Motor::set_motor_raw(int fl, int fr, int bl, int br)

@@ -11,21 +11,38 @@ PPMCommand control_raw;
 
 Motor motor;
 MotorDevice motor_device(motor);
+ServoOutput servo_output;
+ServoDevice servo_device(servo_output);
+
+MS5611SPI baro;
+Barometer barometer(baro);
+BaroData baro_data;
+
+MTF02 mtf02;
+OpticalFlow optical_flow(mtf02);
+MTF02Data mtf02_data;
 
 unsigned long last_active = micros();
 
 AttiStabilizer atti_stabilizer = AttiStabilizer();
+VelStabilizer vxy_stabilizer = VelStabilizer();
+
+VzStabilizer vz_stabilizer = VzStabilizer();
+
+PositionHoldController pos_hold_controller = PositionHoldController();
+AltHoldController alt_hold_controller = AltHoldController();
 
 ESKF eskf = ESKF();
 
 StateMachine statemachine = StateMachine();
 
-PPMCommand rpy_cmd = {0}; // IMPORTANT: forgetting this line will cause drone to fly away
+PPMCommand rpy_cmd = {0}; // need this global because command is now parsed (i-BUS on UART5 parses byte by byte)
 PPMCommand vxyz_cmd = {0};
 
 void setup()
 {
   Serial.begin(115200);
+
   delay(5000);
   if (!imu_device.setup())
   {
@@ -34,6 +51,15 @@ void setup()
     {
     }
   }
+
+  if (!optical_flow.setup())
+  {
+    Serial.println("Optical flow failure");
+    while (true)
+    {
+    }
+  }
+  delay(500);
 
   // Initial read and initialize the attitude estimate.
   while (!imu_device.read(imu_data))
@@ -64,14 +90,9 @@ void loop()
   }
 
   eskf.propagate(imu_data);
-  eskf.correct_gravity(imu_data.accel);
+  //eskf.correct_gravity(imu_data.accel);
 
-  //debug::plot(Vec3{imu_data.gyro.y, static_cast<float>(mtf02_data.data.flow_x) * static_cast<float>(mtf02_data.data.dist_mm) * 1e-5f, 0});
-
-  debug::log(quaternionToEuler(eskf.nominal.q) * DEG_PER_RAD);
-
-  //update_optical_flow(800);
-  // update_baro();
+  update_optical_flow(800);
 
   PPMCommand cmd_raw{};
   bool new_cmd = receiver.read(cmd_raw);
@@ -89,18 +110,12 @@ void loop()
   float cy = cosf(e.yaw);
   float sy = sinf(e.yaw);
 
+  debug::log(eskf.nominal.p);
+
   Vec3 v_v1{
       cy * v_world.x + sy * v_world.y,
       -sy * v_world.x + cy * v_world.y,
       v_world.z};
-
-  // debug::plot(v_v1);
-
-  //  Position hold if vxy is 0
-  
-  //debug::log(rpy_cmd);
-
-  // debug::log(vxyz_cmd);
 
   // state machine uses rpy cmd for thrust 0-1
   statemachine.update(rpy_cmd, eskf.nominal, eskf.h_terrain);
@@ -115,13 +130,13 @@ void loop()
       flightstate == DISARMED ||
       flightstate == ARMED;
 
-  const bool manual_attitude = true ||
+  const bool manual_attitude =
       flightmode == ANGLE ||
       flightstate == DISARMED ||
       flightstate == ARMED ||
       flightstate == TAKEOFF;
 
-  const bool manual_throttle = true || 
+  const bool manual_throttle =
       flightstate == DISARMED ||
       flightstate == ARMED ||
       flightstate == TAKEOFF ||
@@ -133,8 +148,62 @@ void loop()
 
   if (flightstate == DISARMED)
   {
+    //eskf.reset_baro_offset(baro_data.altitude_m);
     eskf.reset_zero_vxy(0.01f);
     reset_flight_controllers();
+  }
+
+  
+  if (ground_state)
+  {
+    pos_hold_controller.active = false;
+    pos_hold_controller.target = eskf.nominal.p;
+  }
+  
+  // position holding 
+  
+  if (fabsf(vxyz_cmd.C2) <= 0.1f && fabsf(vxyz_cmd.C4) <= 0.1f)
+  {
+    if (!pos_hold_controller.active)
+    {
+      pos_hold_controller.active = true;
+      pos_hold_controller.target = eskf.nominal.p;
+    }
+
+    Vec3 pos_error = pos_hold_controller.target - eskf.nominal.p;
+   
+    Vec3 pos_error_v1{
+        cosf(e.yaw) * pos_error.x + sy * pos_error.y,
+        -sinf(e.yaw) * pos_error.x + cy * pos_error.y,
+        0.0f};
+    
+    Vec3 vcmd_v1 = pos_hold_controller.vel_from_pos_error(pos_error_v1);
+    
+    vxyz_cmd.C2 = vcmd_v1.x;
+    vxyz_cmd.C4 = vcmd_v1.y;
+
+    //debug::log(pos_error);
+    
+  }
+  else
+  {
+    pos_hold_controller.active = false;
+  }
+
+  // alt holding
+  if (fabsf(vxyz_cmd.C3) <= 0.1f){
+    if (!alt_hold_controller.active)
+    {
+      alt_hold_controller.active = true;
+      alt_hold_controller.target = eskf.nominal.p.z;
+    }
+    float vz = alt_hold_controller.vz_from_z_error(eskf.nominal.p.z - alt_hold_controller.target);
+    vxyz_cmd.C3 = vz;
+    //Serial.println("Alt hold active");
+  }
+  else
+  {
+    alt_hold_controller.active = false;
   }
 
   EulerAngle angle_target{};
@@ -143,8 +212,8 @@ void loop()
   {
     angle_target = EulerAngle{
         rpy_cmd.C1,
-        rpy_cmd.C2,
-        rpy_cmd.C4};
+        rpy_cmd.C2 * 0.5f,
+        rpy_cmd.C4 * 0.5f};
   }
   else
   {
@@ -167,7 +236,7 @@ void loop()
   else
   {
     // ESKF v.z is positive down.
-    constexpr float HOVER_THRUST = 0.47f;
+    constexpr float HOVER_THRUST = 0.4f;
 
     float vz_cmd_down = vxyz_cmd.C3;
 
@@ -189,18 +258,17 @@ void loop()
 
   if (motors_allowed && throttle > 0.1f && throttle <= 1.0f)
   {
-    //debug::log(throttle);
+    // debug::log(throttle);
     motor_device.write(throttle, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
   }
   else
   {
-    debug::log(throttle);
+    // debug::log(throttle);
     motor.set_motor(MotorCommand{0.0f, 0.0f, 0.0f, 0.0f});
 
     motor_device.write(0.0f, 0.0f, 0.0f, 0.0f);
     reset_flight_controllers();
   }
-
   // debug::plot(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
 

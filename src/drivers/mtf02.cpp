@@ -1,6 +1,6 @@
 #include "drivers/mtf02.h"
 
-MTF02::MTF02(HardwareSerial &serial) : serial_(serial) {}
+MTF02::MTF02() {}
 
 bool MTF02::setup() {
     serial_.begin(baud_);
@@ -17,7 +17,7 @@ bool MTF02::parse() {
     return true;
 }
 
-bool MTF02::has_bytes() const {
+bool MTF02::has_bytes() {
     return serial_.available() > 0;
 }
 

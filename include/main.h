@@ -58,8 +58,8 @@ extern StateMachine statemachine;
 inline void reset_flight_controllers()
 {
     atti_stabilizer.reset();
-    //vxy_stabilizer.reset();
-    //vz_stabilizer.reset();
+    vxy_stabilizer.reset();
+    vz_stabilizer.reset();
 }
 
 inline void update_optical_flow(int time_buffer_us)

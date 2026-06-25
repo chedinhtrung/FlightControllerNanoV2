@@ -3,6 +3,7 @@
 
 #include "datastructs.h"
 #include "mathutils.h"
+#include "debug.h"
 
 struct MotorAdjust
 {
@@ -59,11 +60,11 @@ class VelStabilizer
     // I = degrees of adjustment per m/s times 1s
     // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(20.0f, 4.0f, 4e-1f, 4.0f, 2.0f);
-    PID vy_pid_l1 = PID(20.0f, 4.0f, 4e-1f, 4.0f, 2.0f);
+    PID vx_pid_l1 = PID(15.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
+    PID vy_pid_l1 = PID(15.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
 
-    PID vx_pid_l2 = PID(35.0f, 0.0f, 7e-1f, 4.0f, 5.0f);
-    PID vy_pid_l2 = PID(35.0f, 0.0f, 7e-1f, 4.0f, 5.0f);
+    PID vx_pid_l2 = PID(30.0f, 0.0f, 4e-1f, 4.0f, 5.0f);
+    PID vy_pid_l2 = PID(30.0f, 0.0f, 4e-1f, 4.0f, 5.0f);
 
 public:
 
@@ -151,7 +152,7 @@ public:
 class VzStabilizer
 {
 private:
-    PID vz_pid = PID(0.30, 6e-2f, 0.05f, 0.05f, 0.05f);
+    PID vz_pid = PID(0.35, 6e-2f, 0.05f, 0.05f, 0.05f);
 
 public:
     inline float thrust_adjust_from_vz_error(float vz_error)
@@ -198,6 +199,7 @@ public:
     bool active = false;
     inline float vz_from_z_error(const float z_error)
     {
+        //debug::log(z_error);
         float vz_cmd = -2.5 * z_error;
         vz_cmd = constrain(vz_cmd, -MAX_V, MAX_V);
         return vz_cmd;

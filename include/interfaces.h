@@ -74,7 +74,7 @@ public:
     virtual ~OpticalFlowDriver() = default;
     virtual bool setup() = 0;
     virtual bool parse() = 0;
-    virtual bool has_bytes() const = 0;
+    virtual bool has_bytes() = 0;
     virtual bool read(MTF02Data &data) = 0;
     virtual bool write() { return false; }
 };

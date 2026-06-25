@@ -23,11 +23,11 @@ struct MTF02Data{
 
 class MTF02 : public OpticalFlowDriver {
 public:
-    explicit MTF02(HardwareSerial &serial);
+    explicit MTF02();
 
     bool setup() override;
     bool parse() override;
-    bool has_bytes() const override;
+    bool has_bytes() override;
     bool read(MTF02Data &out) override;
 
 private:
@@ -35,7 +35,7 @@ private:
     static constexpr uint8_t kRangeMsgId = 0x51;
     static constexpr uint8_t kMaxPayloadLen = 64;
 
-    HardwareSerial &serial_;
+    HardwareSerial serial_ = HardwareSerial(PA10, PA9);
     uint32_t baud_ = 115200;
     MTF02Data flow_data_{};
     bool has_new_sample_ = false;
