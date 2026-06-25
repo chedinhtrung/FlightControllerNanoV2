@@ -37,7 +37,7 @@ ESKF eskf = ESKF();
 StateMachine statemachine = StateMachine();
 
 PPMCommand rpy_cmd = {0}; // need this global because command is now parsed (i-BUS on UART5 parses byte by byte)
-PPMCommand vxyz_cmd = {0};
+PPMCommand pilot_vxyz_cmd = {0};
 
 void setup()
 {
@@ -99,10 +99,14 @@ void loop()
   if (new_cmd)
   {
     rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
-    vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
+    pilot_vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
   } else {
     
   }
+
+  // Start from the latest pilot intent each loop, then let hold controllers
+  // modify a working copy without feeding their own output back into engage logic.
+  PPMCommand control_vxyz_cmd = pilot_vxyz_cmd;
 
   Vec3 v_world = eskf.nominal.v;
 
@@ -162,7 +166,7 @@ void loop()
   
   // position holding 
   
-  if (fabsf(vxyz_cmd.C2) <= 0.1f && fabsf(vxyz_cmd.C4) <= 0.1f)
+  if (fabsf(pilot_vxyz_cmd.C2) <= 0.1f && fabsf(pilot_vxyz_cmd.C4) <= 0.1f)
   {
     if (!pos_hold_controller.active)
     {
@@ -179,8 +183,8 @@ void loop()
     
     Vec3 vcmd_v1 = pos_hold_controller.vel_from_pos_error(pos_error_v1);
     
-    vxyz_cmd.C2 = vcmd_v1.x;
-    vxyz_cmd.C4 = vcmd_v1.y;
+    control_vxyz_cmd.C2 = vcmd_v1.x;
+    control_vxyz_cmd.C4 = vcmd_v1.y;
 
     //debug::log(pos_error);
     
@@ -191,14 +195,14 @@ void loop()
   }
 
   // alt holding
-  if (fabsf(vxyz_cmd.C3) <= 0.1f){
+  if (fabsf(pilot_vxyz_cmd.C3) <= 0.1f){
     if (!alt_hold_controller.active)
     {
       alt_hold_controller.active = true;
       alt_hold_controller.target = eskf.nominal.p.z;
     }
     float vz = alt_hold_controller.vz_from_z_error(eskf.nominal.p.z - alt_hold_controller.target);
-    vxyz_cmd.C3 = vz;
+    control_vxyz_cmd.C3 = vz;
     //Serial.println("Alt hold active");
   }
   else
@@ -217,7 +221,7 @@ void loop()
   }
   else
   {
-    angle_target = compute_angle_target_from_cmd(rpy_cmd, vxyz_cmd);
+    angle_target = compute_angle_target_from_cmd(rpy_cmd, control_vxyz_cmd);
   }
 
   MotorAdjust m_adjust = atti_stabilizer.compute_rpy_adjust(
@@ -238,7 +242,7 @@ void loop()
     // ESKF v.z is positive down.
     constexpr float HOVER_THRUST = 0.4f;
 
-    float vz_cmd_down = vxyz_cmd.C3;
+    float vz_cmd_down = control_vxyz_cmd.C3;
 
     if (flightstate == LANDING)
     {
