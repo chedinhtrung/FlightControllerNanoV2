@@ -60,8 +60,8 @@ class VelStabilizer
     // I = degrees of adjustment per m/s times 1s
     // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(15.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
-    PID vy_pid_l1 = PID(15.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
+    PID vx_pid_l1 = PID(20.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
+    PID vy_pid_l1 = PID(20.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
 
     PID vx_pid_l2 = PID(30.0f, 0.0f, 4e-1f, 4.0f, 5.0f);
     PID vy_pid_l2 = PID(30.0f, 0.0f, 4e-1f, 4.0f, 5.0f);
@@ -175,9 +175,9 @@ public:
     inline Vec3 vel_from_pos_error(const Vec3& pos_error)
     {
         float ep = sqrt(dot(pos_error, pos_error));
-        float mult = 0.6f;
+        float mult = 0.9f;
         if (ep < 0.25){
-            mult = 0.25f;
+            mult = 0.5f;
         }
 
         Vec3 v_cmd = pos_error * mult;

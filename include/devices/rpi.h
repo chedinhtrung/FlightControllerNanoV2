@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define RPI_SERIAL Serial2
+#define RPI_SERIAL piSerial
 #define PUBLISH_RATE_HZ 50    // Messages should be written at max this rate.
 
 enum class RPiMessageType : uint8_t {
@@ -13,7 +13,7 @@ enum class RPiMessageType : uint8_t {
     STRING = 0x04,
     COMMAND = 0x05,
 };
-
+extern HardwareSerial piSerial;
 class RPi {
 public:
     explicit RPi(HardwareSerial &serial = RPI_SERIAL);

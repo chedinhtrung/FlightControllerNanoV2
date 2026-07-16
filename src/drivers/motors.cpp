@@ -30,6 +30,13 @@ Motor::Motor()
     analogWriteFrequency(2000);
 
     set_motor_raw(0, 0, 0, 0);
+    /*
+    set_motor_raw(2048, 2048, 2048, 2048);
+    delay(5000);
+    set_motor_raw(1024, 1024, 1024, 1024);
+    delay(5000);
+    set_motor_raw(0, 0, 0, 0);
+    */
 }
 
 void Motor::set_motor_raw(int fl, int fr, int bl, int br)

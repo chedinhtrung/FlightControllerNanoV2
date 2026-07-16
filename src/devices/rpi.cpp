@@ -1,5 +1,7 @@
 #include "devices/rpi.h"
 
+HardwareSerial piSerial(PC7, PC6);
+
 RPi::RPi(HardwareSerial &serial) : serial_(serial) {}
 
 void RPi::setup(uint32_t baud) {

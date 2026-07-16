@@ -69,14 +69,15 @@ inline void update_optical_flow(int time_buffer_us)
     while (optical_flow.has_bytes() && (micros() - last_active) < (PERIOD_US - time_buffer_us))
     {
         optical_flow.kick();
-    }
-
-    bool flow_new_data = optical_flow.read(mtf02_data);
+        bool flow_new_data = optical_flow.read(mtf02_data);
 
     if (flow_new_data)
     {
         // update eskf with flow data. Refer to doc on update model
         eskf.correct_flow_and_range(mtf02_data);
+        //debug::plot(Vec3{mtf02_data.data.flow_x, mtf02_data.data.flow_y, float(micros() - last_active)}, "flow_raw");
+        //debug::plot(mtf02_data.data.flow_y);
+    }
     }
 }
 
