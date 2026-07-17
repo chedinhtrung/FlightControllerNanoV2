@@ -4,10 +4,10 @@
 #include <Arduino.h>
 #include "interfaces.h"
 
-#define FR PA2
-#define BR PA1
-#define BL PA3
-#define FL PA0
+#define FR PA2  // M3
+#define BR PA1  // M2
+#define BL PA3  // M4
+#define FL PA0  // M1
 
 struct RawMotor {
     uint16_t fl = 0;

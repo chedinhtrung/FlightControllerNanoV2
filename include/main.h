@@ -13,7 +13,7 @@
 #include "drivers/motors.h"
 #include "drivers/mtf02.h"
 #include "drivers/ms5611_spi.h"
-#include "drivers/icm42688p.h"
+#include "drivers/lsm6dsv.h"
 #include "drivers/receiver.h"
 #include "drivers/servo.h"
 #include "madgwick.h"
@@ -22,7 +22,7 @@
 #include "eskf.h"
 #include "statemachine.h"
 
-extern ICM42688P imu;
+extern LSM6DSV imu;
 extern Imu imu_device;
 extern ImuData imu_data;
 
@@ -77,6 +77,7 @@ inline void update_optical_flow(int time_buffer_us)
         eskf.correct_flow_and_range(mtf02_data);
         //debug::plot(Vec3{mtf02_data.data.flow_x, mtf02_data.data.flow_y, float(micros() - last_active)}, "flow_raw");
         //debug::plot(mtf02_data.data.flow_y);
+        //debug::log(mtf02_data, "flow");
     }
     }
 }

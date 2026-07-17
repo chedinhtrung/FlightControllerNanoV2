@@ -1,7 +1,7 @@
 #include "main.h"
 #include "message_helpers.h"
 
-ICM42688P imu;
+LSM6DSV imu;
 Imu imu_device(imu);
 ImuData imu_data;
 
@@ -39,6 +39,8 @@ StateMachine statemachine = StateMachine();
 PPMCommand rpy_cmd = {0}; // need this global because command is now parsed (i-BUS on UART5 parses byte by byte)
 PPMCommand pilot_vxyz_cmd = {0};
 
+RPi rpi;
+
 void setup()
 {
   Serial.begin(115200);
@@ -72,6 +74,8 @@ void setup()
 
   eskf.setup(imu_data.accel);
 
+  rpi.setup();
+
   do
   {
     receiver.read(control_raw);
@@ -90,7 +94,7 @@ void loop()
   }
 
   eskf.propagate(imu_data);
-  //eskf.correct_gravity(imu_data.accel);
+  // eskf.correct_gravity(imu_data.accel);
 
   update_optical_flow(800);
 
@@ -152,12 +156,11 @@ void loop()
 
   if (flightstate == DISARMED)
   {
-    //eskf.reset_baro_offset(baro_data.altitude_m);
+    // eskf.reset_baro_offset(baro_data.altitude_m);
     eskf.reset_zero_vxy(0.01f);
     reset_flight_controllers();
   }
 
-  
   if (ground_state)
   {
     pos_hold_controller.active = false;
@@ -275,6 +278,9 @@ void loop()
   }
   // debug::plot(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
+  ESKFStatePayload pl = pack(eskf.nominal, eskf.last_imu_timestamp, eskf.h_terrain);
+  const uint8_t *pl_bytes = payload_bytes(pl);
+  //rpi.write(RPiMessageType::STATE, pl_bytes, sizeof(pl));
 
   while (micros() - last_active < PERIOD_US)
   {
