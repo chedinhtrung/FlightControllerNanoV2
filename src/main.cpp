@@ -39,6 +39,8 @@ StateMachine statemachine = StateMachine();
 PPMCommand rpy_cmd = {0}; // need this global because command is now parsed (i-BUS on UART5 parses byte by byte)
 PPMCommand pilot_vxyz_cmd = {0};
 
+RPi rpi;
+
 void setup()
 {
   Serial.begin(115200);
@@ -72,6 +74,8 @@ void setup()
 
   eskf.setup(imu_data.accel);
 
+  rpi.setup();
+
   do
   {
     receiver.read(control_raw);
@@ -90,7 +94,7 @@ void loop()
   }
 
   eskf.propagate(imu_data);
-  //eskf.correct_gravity(imu_data.accel);
+  // eskf.correct_gravity(imu_data.accel);
 
   update_optical_flow(800);
 
@@ -100,8 +104,10 @@ void loop()
   {
     rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
     pilot_vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
-  } else {
-    
+    debug::log(pilot_vxyz_cmd);
+  }
+  else
+  {
   }
 
   // Start from the latest pilot intent each loop, then let hold controllers
@@ -152,12 +158,11 @@ void loop()
 
   if (flightstate == DISARMED)
   {
-    //eskf.reset_baro_offset(baro_data.altitude_m);
+    // eskf.reset_baro_offset(baro_data.altitude_m);
     eskf.reset_zero_vxy(0.01f);
     reset_flight_controllers();
   }
 
-  
   if (ground_state)
   {
     pos_hold_controller.active = false;
@@ -195,7 +200,8 @@ void loop()
   }
 
   // alt holding
-  if (fabsf(pilot_vxyz_cmd.C3) <= 0.1f){
+  if (fabsf(pilot_vxyz_cmd.C3) <= 0.1f)
+  {
     if (!alt_hold_controller.active)
     {
       alt_hold_controller.active = true;
@@ -203,7 +209,7 @@ void loop()
     }
     float vz = alt_hold_controller.vz_from_z_error(eskf.nominal.p.z - alt_hold_controller.target);
     control_vxyz_cmd.C3 = vz;
-    //Serial.println("Alt hold active");
+    // Serial.println("Alt hold active");
   }
   else
   {
@@ -275,6 +281,9 @@ void loop()
   }
   // debug::plot(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
+  ESKFStatePayload pl = pack(eskf.nominal, eskf.last_imu_timestamp, eskf.h_terrain);
+  const uint8_t *pl_bytes = payload_bytes(pl);
+  rpi.write(RPiMessageType::STATE, pl_bytes, sizeof(pl));
 
   while (micros() - last_active < PERIOD_US)
   {
