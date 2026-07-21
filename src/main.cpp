@@ -76,11 +76,15 @@ void setup()
 
   rpi.setup();
 
+  pinMode(PD10, OUTPUT);
+
   do
   {
     receiver.read(control_raw);
     delay(10);
   } while (control_raw.C3 > 1050.0f);
+
+  digitalWrite(PD10, 0);
 }
 
 void loop()
@@ -219,8 +223,8 @@ void loop()
   {
     angle_target = EulerAngle{
         rpy_cmd.C1,
-        rpy_cmd.C2 * 0.5f,
-        rpy_cmd.C4 * 0.5f};
+        rpy_cmd.C2,
+        rpy_cmd.C4};
   }
   else
   {
@@ -276,7 +280,8 @@ void loop()
     motor_device.write(0.0f, 0.0f, 0.0f, 0.0f);
     reset_flight_controllers();
   }
-  // debug::plot(e * DEG_PER_RAD);
+  //debug::log(imu_data.accel);
+  //debug::log(e * DEG_PER_RAD);
   // debug::plot(imu_data.accel);
   ESKFStatePayload pl = pack(eskf.nominal, eskf.last_imu_timestamp, eskf.h_terrain);
   const uint8_t *pl_bytes = payload_bytes(pl);

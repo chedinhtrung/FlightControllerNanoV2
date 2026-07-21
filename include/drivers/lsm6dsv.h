@@ -6,10 +6,10 @@
 
 #include "interfaces.h"
 
-#define LSM6DSV_CS_PIN   PB1
-#define LSM6DSV_SCK_PIN  PE12
-#define LSM6DSV_MISO_PIN PE13
-#define LSM6DSV_MOSI_PIN PE14
+#define LSM6DSV_CS_PIN   PA4
+#define LSM6DSV_SCK_PIN  PA5
+#define LSM6DSV_MISO_PIN PA6
+#define LSM6DSV_MOSI_PIN PA7
 
 class LSM6DSV : public ImuDriver
 {
