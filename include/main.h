@@ -77,6 +77,7 @@ inline void update_optical_flow(int time_buffer_us)
         eskf.correct_flow_and_range(mtf02_data);
         //debug::plot(Vec3{mtf02_data.data.flow_x, mtf02_data.data.flow_y, float(micros() - last_active)}, "flow_raw");
         //debug::plot(mtf02_data.data.flow_y);
+        //debug::log(mtf02_data);
     }
     }
 }
