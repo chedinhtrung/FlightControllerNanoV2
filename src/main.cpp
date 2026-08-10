@@ -104,7 +104,7 @@ void loop()
   {
     rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
     pilot_vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
-    debug::log(pilot_vxyz_cmd);
+    //debug::log(pilot_vxyz_cmd);
   }
   else
   {
@@ -120,7 +120,7 @@ void loop()
   float cy = cosf(e.yaw);
   float sy = sinf(e.yaw);
 
-  debug::log(eskf.nominal.p);
+  //debug::log(eskf.nominal.p);
 
   Vec3 v_v1{
       cy * v_world.x + sy * v_world.y,
@@ -222,8 +222,8 @@ void loop()
   {
     angle_target = EulerAngle{
         rpy_cmd.C1,
-        rpy_cmd.C2 * 0.5f,
-        rpy_cmd.C4 * 0.5f};
+        rpy_cmd.C2,
+        rpy_cmd.C4};
   }
   else
   {

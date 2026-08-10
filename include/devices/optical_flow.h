@@ -5,10 +5,11 @@
 #include "interfaces.h"
 #include "datastructs.h"
 #include "lpf.h"
+#include "debug.h"
 
 // In reality flow arrives late, often several ms behind the actual velocity 
 // This constant needs to be tuned.
-constexpr uint32_t FLOW_DELAY_US = 25000; //25ms 
+constexpr uint32_t FLOW_DELAY_US = 2000; //2ms 
 
 class OpticalFlow {
 public:

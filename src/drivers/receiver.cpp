@@ -3,8 +3,6 @@
 
 PPMReceiver::PPMReceiver()
 {
-    _serial.setRx(PB5);
-    _serial.setTx(PB6_ALT1);
     _serial.begin(115200, SERIAL_8N1);
 }
 
