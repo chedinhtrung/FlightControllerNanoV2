@@ -226,7 +226,8 @@ bool ESKF::propagate_core(const ImuData &imudata)
 }
 void ESKF::propagate(const ImuData &imudata)
 {
-    if(propagate_core(imudata)){
+    if (propagate_core(imudata))
+    {
         push_buffer(imudata);
     }
 }
@@ -366,11 +367,13 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
 
     if (trust_x_raw <= 0.0f && trust_y_raw <= 0.0f)
     {
+        Serial.println("Invalid flow data");
         return;
     }
 
     if (rho < 0.005f || rho > 5.0f)
     {
+        Serial.println("Invalid range data");
         return;
     }
 
@@ -412,8 +415,21 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
     BLA::Matrix<2, 1> y = z - h;
 
     // debug::plot(v_G_B);
+    
+    /*
+    const Vec3 pred_trans =
+        v_G_B * (-1.0f / rho);
 
-    // debug::plot(Vec3{pred_3d.x, FLOW_SIGN_X * flow.value.x, 0});
+    const Vec3 pred_rot =
+        cross(omegr_GP, r_B) * (-1.0f / rho);
+
+    debug::plot(Vec3{
+        pred_trans.x,
+        pred_rot.x,
+        FLOW_SIGN_X * flow.value.x});
+    
+    */
+   debug::plot(closest_buf.imudata.accel);
 
     // S = [1 0 0; 0 1 0] because only observe xy
     BLA::Matrix<2, 3> S;
@@ -526,8 +542,8 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
         e.dwb *= MAX_DWB_CORR / dwb_norm;
     }
 
-    //e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
-    // e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
+    // e.dwb = Vec3{0, 0, 0};    // temporary gate disallow update gyro bias
+    //  e.dtheta = Vec3{0, 0, 0}; // temporary gate disallow update angle
 
     inject(e);
 }
@@ -670,7 +686,7 @@ void ESKF::correct_range(const MTF02Data &flowdata, const StateBuffer &closest_b
     }
 
     // Optional: kill effect on accel and gyro bias
-    //e.dab = Vec3{0.0f, 0.0f, 0.0f};
+    // e.dab = Vec3{0.0f, 0.0f, 0.0f};
     // e.dwb = Vec3{0.0f, 0.0f, 0.0f};
 
     inject(e);
@@ -929,7 +945,7 @@ void ESKF::replay_from(int buf_idx)
 
         if (propagate_core(state_buf[next].imudata))
         {
-            //correct_gravity(state_buf[next].imudata.accel);
+            // correct_gravity(state_buf[next].imudata.accel);
             state_buf[next].state = nominal;
             state_buf[next].P = P;
             state_buf[next].timestamp = state_buf[next].imudata.timestamp;
