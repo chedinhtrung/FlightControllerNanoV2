@@ -429,7 +429,7 @@ void ESKF::correct_flow(const MTF02Data &flowdata, const StateBuffer &closest_bu
         FLOW_SIGN_X * flow.value.x});
     
     */
-   debug::plot(closest_buf.imudata.accel);
+   //debug::plot(closest_buf.imudata.accel);
 
     // S = [1 0 0; 0 1 0] because only observe xy
     BLA::Matrix<2, 3> S;

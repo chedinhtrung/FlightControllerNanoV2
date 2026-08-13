@@ -36,8 +36,8 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.001f, 1e-4f, 1.0e-5f, 0.15f, 0.12f);
-    PID x_rate_pid = PID(0.001f, 1e-4f, 1.0e-5f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.0012f, 1e-4f, 0.8e-5f, 0.15f, 0.12f);
+    PID x_rate_pid = PID(0.0012f, 1e-4f, 0.8e-5f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
@@ -60,8 +60,8 @@ class VelStabilizer
     // I = degrees of adjustment per m/s times 1s
     // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(20.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
-    PID vy_pid_l1 = PID(20.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
+    PID vx_pid_l1 = PID(12.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
+    PID vy_pid_l1 = PID(12.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
 
     PID vx_pid_l2 = PID(30.0f, 0.0f, 4e-1f, 4.0f, 5.0f);
     PID vy_pid_l2 = PID(30.0f, 0.0f, 4e-1f, 4.0f, 5.0f);
@@ -71,8 +71,8 @@ public:
     inline float velHoldAuthorityFromHeight(float h_m)
     {
         // computes how much gain to adjust at different height
-        constexpr float FULL_H = 2.0f;     // full authority below this
-        constexpr float WEAK_H = 4.0f;     // weak authority above this
+        constexpr float FULL_H = 4.0f;     // full authority below this
+        constexpr float WEAK_H = 6.0f;     // weak authority above this
         constexpr float MIN_SCALE = 0.25f; // keep some damping
 
         if (h_m <= FULL_H)
@@ -132,7 +132,7 @@ public:
         roll_target = constrain(roll_target, -MAX_ANGLE, MAX_ANGLE);
 
         // feed forward term
-        constexpr float FFWD_DEG_PER_MPS = 3.0f;
+        constexpr float FFWD_DEG_PER_MPS = 4.0f;
         float pitch_fwd = -target_v.x * FFWD_DEG_PER_MPS; // each m/s target needs about 2.5 degs to MAINTAIN due to drag
         float roll_fwd = target_v.y * FFWD_DEG_PER_MPS;
 
@@ -175,10 +175,7 @@ public:
     inline Vec3 vel_from_pos_error(const Vec3& pos_error)
     {
         float ep = sqrt(dot(pos_error, pos_error));
-        float mult = 0.9f;
-        if (ep < 0.25){
-            mult = 0.5f;
-        }
+        float mult = 0.8f;
 
         Vec3 v_cmd = pos_error * mult;
         v_cmd.x = constrain(v_cmd.x, -MAX_V, MAX_V);
