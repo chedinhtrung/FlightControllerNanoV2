@@ -47,6 +47,9 @@ private:
     static constexpr uint8_t REG_PWR_MGMT0 = 0x4E;
     static constexpr uint8_t REG_GYRO_CONFIG0 = 0x4F;
     static constexpr uint8_t REG_ACCEL_CONFIG0 = 0x50;
+    static constexpr uint8_t REG_GYRO_CONFIG1 = 0x51;
+    static constexpr uint8_t REG_GYRO_ACCEL_CONFIG0 = 0x52;
+    static constexpr uint8_t REG_ACCEL_CONFIG1 = 0x53;
     static constexpr uint8_t REG_WHO_AM_I = 0x75;
     static constexpr uint8_t REG_BANK_SEL = 0x76;
     static constexpr uint8_t REG_ACCEL_DATA_X1 = 0x1F;
@@ -57,7 +60,11 @@ private:
     static constexpr uint8_t PWR_MGMT0_LN_6AXIS = 0x0F;
 
     // ODR encoding from datasheet for register bits [3:0].
-    static constexpr uint8_t ODR_500HZ = 0x0F;
+    static constexpr uint8_t ODR_1KHZ = 0x06;
+    static constexpr uint8_t GYRO_UI_FILT_100HZ = 0x04;
+    static constexpr uint8_t ACCEL_UI_FILT_60HZ = 0x05;
+    static constexpr uint8_t GYRO_UI_FILT_ORD_2ND = 0x01;
+    static constexpr uint8_t ACCEL_UI_FILT_ORD_2ND = 0x01;
 
     // Chosen UI output configuration.
     static constexpr GyroFsSel GYRO_FS_SEL = GyroFsSel::Dps250;

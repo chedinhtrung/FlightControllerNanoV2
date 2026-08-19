@@ -41,10 +41,10 @@ private:
     BLA::Matrix<15, 15> Fx; // Transition
 
     // accel white noise, m/s^2 / sqrt(Hz)
-    float sigma_an_mps2 = 0.50f;
+    float sigma_an_mps2 = 0.6f;
 
     // gyro white noise, rad/s / sqrt(Hz)
-    float sigma_wn_radps = 0.003f;
+    float sigma_wn_radps = 0.008f;
 
     // accel bias random walk, m/s^2 / sqrt(Hz)
     float sigma_aw = 0.005f;
@@ -62,7 +62,7 @@ private:
     float gravity_direction_sigma = 3.0f * RAD_PER_DEG;
 
     // Optical flow uncertainty measured in rad per sec of angular change in the image
-    float sigma_flow_radps = 0.05f; // rad/s
+    float sigma_flow_radps = 0.08f; // rad/s
 
     float sigma_range_m = 0.05f; // measurement noise of range sensor, in meters
 

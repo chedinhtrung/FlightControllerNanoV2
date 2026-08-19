@@ -36,8 +36,8 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.0012f, 1e-4f, 0.8e-5f, 0.15f, 0.12f);
-    PID x_rate_pid = PID(0.0012f, 1e-4f, 0.8e-5f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.0017f, 1e-4f, 1.5e-5f, 0.15f, 0.12f);
+    PID x_rate_pid = PID(0.0017f, 1e-4f, 1.5e-5f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
@@ -46,7 +46,7 @@ public:
     inline float angle_error_to_angle_rate(float angle)
     {
         
-        constexpr float mult = 5.0f;
+        constexpr float mult = 6.0f;
         float rate = angle * mult;
 
         constexpr float MAX_RATE_DPS = 120.0f;
@@ -60,11 +60,11 @@ class VelStabilizer
     // I = degrees of adjustment per m/s times 1s
     // D = degrees of adjustment per m/s per 1s
 
-    PID vx_pid_l1 = PID(12.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
-    PID vy_pid_l1 = PID(12.0f, 4.0f, 2e-1f, 4.0f, 2.0f);
+    PID vx_pid_l1 = PID(18.0f, 5.0f, 3e-1f, 4.0f, 2.0f);
+    PID vy_pid_l1 = PID(18.0f, 5.0f, 3e-1f, 4.0f, 2.0f);
 
-    PID vx_pid_l2 = PID(30.0f, 0.0f, 4e-1f, 4.0f, 5.0f);
-    PID vy_pid_l2 = PID(30.0f, 0.0f, 4e-1f, 4.0f, 5.0f);
+    PID vx_pid_l2 = PID(24.0f, 0.0f, 2e-1f, 4.0f, 5.0f);
+    PID vy_pid_l2 = PID(24.0f, 0.0f, 2e-1f, 4.0f, 5.0f);
 
 public:
 

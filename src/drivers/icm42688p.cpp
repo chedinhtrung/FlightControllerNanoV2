@@ -128,11 +128,25 @@ bool ICM42688P::setup()
     writeRegister(REG_PWR_MGMT0, PWR_MGMT0_LN_6AXIS);
     delay(1);
 
-    const uint8_t gyro_cfg0 = makeGyroConfig0(GYRO_FS_SEL, ODR_500HZ);
-    const uint8_t accel_cfg0 = makeAccelConfig0(ACCEL_FS_SEL, ODR_500HZ);
+    const uint8_t gyro_cfg0 = makeGyroConfig0(GYRO_FS_SEL, ODR_1KHZ);
+    const uint8_t accel_cfg0 = makeAccelConfig0(ACCEL_FS_SEL, ODR_1KHZ);
 
     writeRegister(REG_GYRO_CONFIG0, gyro_cfg0);
     writeRegister(REG_ACCEL_CONFIG0, accel_cfg0);
+
+    // Program UI low-pass filters in LN mode with moderate bandwidths.
+    // We use 2nd-order filtering for a little more attenuation without going too aggressive.
+    uint8_t gyro_cfg1 = readRegister(REG_GYRO_CONFIG1);
+    gyro_cfg1 = (gyro_cfg1 & ~0x0C) | (GYRO_UI_FILT_ORD_2ND << 2);
+    writeRegister(REG_GYRO_CONFIG1, gyro_cfg1);
+
+    const uint8_t gyro_accel_cfg0 = (ACCEL_UI_FILT_60HZ << 4) | GYRO_UI_FILT_100HZ;
+    writeRegister(REG_GYRO_ACCEL_CONFIG0, gyro_accel_cfg0);
+
+    uint8_t accel_cfg1 = readRegister(REG_ACCEL_CONFIG1);
+    accel_cfg1 = (accel_cfg1 & ~0x18) | (ACCEL_UI_FILT_ORD_2ND << 3);
+    writeRegister(REG_ACCEL_CONFIG1, accel_cfg1);
+
     delay(1);
 
     // Cache scale factors that exactly match configured full-scale ranges.
@@ -145,6 +159,18 @@ bool ICM42688P::setup()
         return false;
     }
     if (readRegister(REG_ACCEL_CONFIG0) != accel_cfg0)
+    {
+        return false;
+    }
+    if ((readRegister(REG_GYRO_CONFIG1) & 0x0C) != (GYRO_UI_FILT_ORD_2ND << 2))
+    {
+        return false;
+    }
+    if (readRegister(REG_GYRO_ACCEL_CONFIG0) != gyro_accel_cfg0)
+    {
+        return false;
+    }
+    if ((readRegister(REG_ACCEL_CONFIG1) & 0x18) != (ACCEL_UI_FILT_ORD_2ND << 3))
     {
         return false;
     }

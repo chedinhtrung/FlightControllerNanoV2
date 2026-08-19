@@ -18,7 +18,7 @@ class RPi {
 public:
     explicit RPi(HardwareSerial &serial = RPI_SERIAL);
 
-    void setup(uint32_t baud = 460800);
+    void setup(uint32_t baud = 115200);
     bool write(RPiMessageType type, const uint8_t *payload, uint8_t len);
 
 private:

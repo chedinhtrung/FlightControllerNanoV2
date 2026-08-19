@@ -48,6 +48,7 @@ uint8_t RPi::checksum(RPiMessageType type, uint8_t len, const uint8_t *payload) 
 }
 
 bool RPi::can_publish() {
+    // timing for publishing message to flight computer
     if (PUBLISH_RATE_HZ <= 0) {
         return true;
     }
