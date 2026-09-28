@@ -36,8 +36,8 @@ class AttiStabilizer
 {
     // Double loop stabilizer, inner = rate, outer = angle.
 public:
-    PID y_rate_pid = PID(0.0017f, 1e-4f, 1.5e-5f, 0.15f, 0.12f);
-    PID x_rate_pid = PID(0.0017f, 1e-4f, 1.5e-5f, 0.15f, 0.12f);
+    PID y_rate_pid = PID(0.0012f, 1e-4f, 1.5e-5f, 0.15f, 0.12f);
+    PID x_rate_pid = PID(0.0012f, 1e-4f, 1.5e-5f, 0.15f, 0.12f);
     PID z_rate_pid = PID(0.003f, 2e-3f, 0.0f, 0.15f, 0.12f);
 
     MotorAdjust compute_rpy_adjust(Quaternion q, EulerAngle target, Vec3 gyro);
@@ -67,7 +67,6 @@ class VelStabilizer
     PID vy_pid_l2 = PID(24.0f, 0.0f, 2e-1f, 4.0f, 5.0f);
 
 public:
-
     inline float velHoldAuthorityFromHeight(float h_m)
     {
         // computes how much gain to adjust at different height
@@ -138,13 +137,11 @@ public:
 
         float pitch_cmd = -pitch_target + pitch_fwd;
         float roll_cmd = roll_target + roll_fwd;
-        
 
         return EulerAngle{
             yawrate,
-            constrain(pitch_cmd, -20,20),
-            constrain(roll_cmd, -20,20)
-        };
+            constrain(pitch_cmd, -20, 20),
+            constrain(roll_cmd, -20, 20)};
     }
     void reset();
 };
@@ -167,20 +164,33 @@ public:
 class PositionHoldController
 {
 private:
-    float MAX_V = 0.8f;  // m/s
+    float MAX_V = 0.8f; // m/s
     // PID: m/s per m error
 public:
     Vec3 target;
     bool active = false;
-    inline Vec3 vel_from_pos_error(const Vec3& pos_error)
+    inline Vec3 vel_from_pos_error(const Vec3 &pos_error)
     {
-        float ep = sqrt(dot(pos_error, pos_error));
-        float mult = 0.8f;
+        constexpr float HIGH_P = 1.5f;
+        constexpr float LOW_P = 0.5f;
+        constexpr float EP_THRESHOLD = 0.09f;
+        float ep = dot(pos_error, pos_error);
+
+        float t = constrain(
+            (ep - EP_THRESHOLD * 0.67f) /
+                (EP_THRESHOLD * 0.66f),
+            0.0f, 1.0f);
+
+        // Smoothstep
+        t = t * t * (3.0f - 2.0f * t);
+
+        float mult = LOW_P + (HIGH_P - LOW_P) * t;
 
         Vec3 v_cmd = pos_error * mult;
+
         v_cmd.x = constrain(v_cmd.x, -MAX_V, MAX_V);
-        v_cmd.y = constrain(v_cmd.y, -MAX_V, MAX_V);            
-        
+        v_cmd.y = constrain(v_cmd.y, -MAX_V, MAX_V);
+
         return v_cmd;
     }
 };

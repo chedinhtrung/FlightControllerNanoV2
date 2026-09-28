@@ -55,6 +55,8 @@ extern VzStabilizer vz_stabilizer;
 
 extern StateMachine statemachine;
 
+extern Vec3LPF vxy_lpf;
+
 inline void reset_flight_controllers()
 {
     atti_stabilizer.reset();
@@ -113,6 +115,8 @@ inline EulerAngle compute_angle_target_from_cmd(const PPMCommand &rpy_cmd, const
         vxy_cmd.C2,
         vxy_cmd.C4,
         0.0f};
+    
+    //v_v1 = vxy_lpf.update(v_v1);
 
     Vec3 vxy_error{
         vxy_cmd.C2 - v_v1.x,

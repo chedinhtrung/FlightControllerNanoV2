@@ -134,13 +134,13 @@ bool ICM42688P::setup()
     writeRegister(REG_GYRO_CONFIG0, gyro_cfg0);
     writeRegister(REG_ACCEL_CONFIG0, accel_cfg0);
 
-    // Program UI low-pass filters in LN mode with moderate bandwidths.
-    // We use 2nd-order filtering for a little more attenuation without going too aggressive.
+    // Narrow the LN-mode UI bandwidths to reduce high-frequency noise.
+    // Keep 2nd-order filtering; nominal BW at 1 kHz is 62.5 Hz gyro / 50 Hz accel.
     uint8_t gyro_cfg1 = readRegister(REG_GYRO_CONFIG1);
     gyro_cfg1 = (gyro_cfg1 & ~0x0C) | (GYRO_UI_FILT_ORD_2ND << 2);
     writeRegister(REG_GYRO_CONFIG1, gyro_cfg1);
 
-    const uint8_t gyro_accel_cfg0 = (ACCEL_UI_FILT_60HZ << 4) | GYRO_UI_FILT_100HZ;
+    const uint8_t gyro_accel_cfg0 = (ACCEL_UI_FILT_ODR_DIV20 << 4) | GYRO_UI_FILT_ODR_DIV16;
     writeRegister(REG_GYRO_ACCEL_CONFIG0, gyro_accel_cfg0);
 
     uint8_t accel_cfg1 = readRegister(REG_ACCEL_CONFIG1);

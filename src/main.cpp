@@ -29,6 +29,8 @@ VelStabilizer vxy_stabilizer = VelStabilizer();
 
 VzStabilizer vz_stabilizer = VzStabilizer();
 
+Vec3LPF vxy_lpf = Vec3LPF(10.0f, DT);
+
 PositionHoldController pos_hold_controller = PositionHoldController();
 AltHoldController alt_hold_controller = AltHoldController();
 
@@ -44,13 +46,22 @@ RPi rpi;
 void setup()
 {
   Serial.begin(115200);
-
-  delay(5000);
+  pinMode(PB0, OUTPUT);
+  for (int i = 0; i < 10; i++)
+  {
+    digitalWrite(PB0, HIGH);
+    delay(500);
+    digitalWrite(PB0, LOW);
+    delay(500);
+  }
+  pinMode(PB0, OUTPUT);
+  digitalWrite(PB0, HIGH);  
   if (!imu_device.setup())
   {
     Serial.println("IMU Failure");
     while (true)
     {
+      Serial.println("IMU Failure");
     }
   }
 
@@ -92,7 +103,7 @@ void loop()
   {
     // Placeholder: optional IMU read error handling.
   }
-
+  // debug::log(imu_data.accel);
   eskf.propagate(imu_data);
   // eskf.correct_gravity(imu_data.accel);
 
@@ -140,13 +151,13 @@ void loop()
       flightstate == DISARMED ||
       flightstate == ARMED;
 
-  const bool manual_attitude =
+  const bool manual_attitude = 
       flightmode == ANGLE ||
       flightstate == DISARMED ||
       flightstate == ARMED ||
       flightstate == TAKEOFF;
 
-  const bool manual_throttle =
+  const bool manual_throttle = 
       flightstate == DISARMED ||
       flightstate == ARMED ||
       flightstate == TAKEOFF ||
@@ -280,7 +291,7 @@ void loop()
     reset_flight_controllers();
   }
   // debug::plot(e * DEG_PER_RAD);
-  // debug::plot(imu_data.accel);
+  debug::plot(eskf.nominal.v);
   ESKFStatePayload pl = pack(eskf.nominal, eskf.last_imu_timestamp, eskf.h_terrain);
   const uint8_t *pl_bytes = payload_bytes(pl);
   rpi.write(RPiMessageType::STATE, pl_bytes, sizeof(pl));

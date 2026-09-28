@@ -61,8 +61,9 @@ private:
 
     // ODR encoding from datasheet for register bits [3:0].
     static constexpr uint8_t ODR_1KHZ = 0x06;
-    static constexpr uint8_t GYRO_UI_FILT_100HZ = 0x04;
-    static constexpr uint8_t ACCEL_UI_FILT_60HZ = 0x05;
+    
+    static constexpr uint8_t GYRO_UI_FILT_ODR_DIV16 = 0x05;
+    static constexpr uint8_t ACCEL_UI_FILT_ODR_DIV20 = 0x06;
     static constexpr uint8_t GYRO_UI_FILT_ORD_2ND = 0x01;
     static constexpr uint8_t ACCEL_UI_FILT_ORD_2ND = 0x01;
 
