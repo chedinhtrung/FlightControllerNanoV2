@@ -111,7 +111,7 @@ bool ICM42688P::setup()
 
     // Software reset (datasheet requires >=1ms wait before further access).
     writeRegister(REG_DEVICE_CONFIG, DEVICE_SOFT_RESET);
-    delay(2);
+    delay(20);
 
     // Reset also returns to bank 0, but write explicitly for safety.
     writeRegister(REG_BANK_SEL, 0x00);

@@ -51,6 +51,9 @@ bool Imu::setup() {
         // Placeholder: optional setup error handling.
         return false;
     }
+    // Allow gyro startup to finish before averaging calibration samples.
+    // ICM42688P startup is 30 ms; earlier reads can contain invalid data.
+    delay(500);
     return calibrate();
 }
 

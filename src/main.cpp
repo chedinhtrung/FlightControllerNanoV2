@@ -47,14 +47,13 @@ void setup()
 {
   Serial.begin(115200);
   pinMode(PB0, OUTPUT);
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < 5; i++)
   {
     digitalWrite(PB0, HIGH);
     delay(500);
     digitalWrite(PB0, LOW);
     delay(500);
   }
-  pinMode(PB0, OUTPUT);
   digitalWrite(PB0, HIGH);  
   if (!imu_device.setup())
   {
