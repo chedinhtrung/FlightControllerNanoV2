@@ -8,6 +8,12 @@
 #include "drivers/mtf02.h"
 #include "drivers/receiver.h"
 
+// Select the serial port used by debug logging and plotting.
+// Initialize the selected port in setup() before logging.
+#ifndef DBG_SERIAL
+#define DBG_SERIAL Serial4
+#endif
+
 namespace debug {
 void log(const Vec3 &value, const char *label = "Vect");
 void log(const VectInt16 &value, const char *label = "VectInt16");

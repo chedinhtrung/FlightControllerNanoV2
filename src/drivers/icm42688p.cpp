@@ -118,7 +118,7 @@ bool ICM42688P::setup()
 
     if (readRegister(REG_WHO_AM_I) != WHO_AM_I_EXPECTED)
     {
-        return false;
+        //return false;
     }
 
     // Keep default drive config from datasheet reset value.

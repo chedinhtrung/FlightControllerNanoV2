@@ -46,6 +46,9 @@ RPi rpi;
 void setup()
 {
   Serial.begin(115200);
+  DBG_SERIAL.setTx(PB9);
+  DBG_SERIAL.setRx(PB8);
+  DBG_SERIAL.begin(115200);
   pinMode(PB0, OUTPUT);
   for (int i = 0; i < 10; i++)
   {
@@ -54,14 +57,17 @@ void setup()
     digitalWrite(PB0, LOW);
     delay(500);
   }
-  pinMode(PB0, OUTPUT);
-  digitalWrite(PB0, HIGH);  
+  digitalWrite(PB0, HIGH);
   if (!imu_device.setup())
   {
     Serial.println("IMU Failure");
     while (true)
     {
       Serial.println("IMU Failure");
+      digitalWrite(PB0, HIGH);
+      delay(1000);
+      digitalWrite(PB0, LOW);
+      delay(1000);
     }
   }
 
@@ -103,9 +109,9 @@ void loop()
   {
     // Placeholder: optional IMU read error handling.
   }
-  // debug::log(imu_data.accel);
+  //debug::log(imu_data.accel);
   eskf.propagate(imu_data);
-  // eskf.correct_gravity(imu_data.accel);
+  //eskf.correct_gravity(imu_data.accel);
 
   update_optical_flow(800);
 
@@ -115,7 +121,7 @@ void loop()
   {
     rpy_cmd = receiver.to_anglemode(cmd_raw); // IMPORTANT: forgetting this line will cause drone to fly away
     pilot_vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
-    //debug::log(pilot_vxyz_cmd);
+    // debug::log(pilot_vxyz_cmd);
   }
   else
   {
@@ -131,7 +137,7 @@ void loop()
   float cy = cosf(e.yaw);
   float sy = sinf(e.yaw);
 
-  //debug::log(eskf.nominal.p);
+  // debug::log(eskf.nominal.p);
 
   Vec3 v_v1{
       cy * v_world.x + sy * v_world.y,
@@ -151,13 +157,13 @@ void loop()
       flightstate == DISARMED ||
       flightstate == ARMED;
 
-  const bool manual_attitude = 
+  const bool manual_attitude =
       flightmode == ANGLE ||
       flightstate == DISARMED ||
       flightstate == ARMED ||
       flightstate == TAKEOFF;
 
-  const bool manual_throttle = 
+  const bool manual_throttle =
       flightstate == DISARMED ||
       flightstate == ARMED ||
       flightstate == TAKEOFF ||
@@ -179,9 +185,9 @@ void loop()
     pos_hold_controller.active = false;
     pos_hold_controller.target = eskf.nominal.p;
   }
-  
-  // position holding 
-  
+
+  // position holding
+
   if (fabsf(pilot_vxyz_cmd.C2) <= 0.1f && fabsf(pilot_vxyz_cmd.C4) <= 0.1f)
   {
     if (!pos_hold_controller.active)
@@ -191,19 +197,18 @@ void loop()
     }
 
     Vec3 pos_error = pos_hold_controller.target - eskf.nominal.p;
-   
+
     Vec3 pos_error_v1{
         cosf(e.yaw) * pos_error.x + sy * pos_error.y,
         -sinf(e.yaw) * pos_error.x + cy * pos_error.y,
         0.0f};
-    
+
     Vec3 vcmd_v1 = pos_hold_controller.vel_from_pos_error(pos_error_v1);
-    
+
     control_vxyz_cmd.C2 = vcmd_v1.x;
     control_vxyz_cmd.C4 = vcmd_v1.y;
 
-    //debug::log(pos_error);
-    
+    // debug::log(pos_error);
   }
   else
   {
@@ -290,8 +295,8 @@ void loop()
     motor_device.write(0.0f, 0.0f, 0.0f, 0.0f);
     reset_flight_controllers();
   }
-  // debug::plot(e * DEG_PER_RAD);
-  debug::plot(eskf.nominal.v);
+  debug::log(e * DEG_PER_RAD);
+  //debug::plot(eskf.nominal.v);
   ESKFStatePayload pl = pack(eskf.nominal, eskf.last_imu_timestamp, eskf.h_terrain);
   const uint8_t *pl_bytes = payload_bytes(pl);
   rpi.write(RPiMessageType::STATE, pl_bytes, sizeof(pl));
