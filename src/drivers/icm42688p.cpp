@@ -147,7 +147,7 @@ bool ICM42688P::setup()
     accel_cfg1 = (accel_cfg1 & ~0x18) | (ACCEL_UI_FILT_ORD_2ND << 3);
     writeRegister(REG_ACCEL_CONFIG1, accel_cfg1);
 
-    delay(1);
+    delay(10);
 
     // Cache scale factors that exactly match configured full-scale ranges.
     gyro_dps_per_lsb_ = 1.0f / gyroLsbPerDps(GYRO_FS_SEL);

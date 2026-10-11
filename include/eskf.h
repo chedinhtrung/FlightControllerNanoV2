@@ -62,7 +62,7 @@ private:
     float gravity_direction_sigma = 3.0f * RAD_PER_DEG;
 
     // Optical flow uncertainty measured in rad per sec of angular change in the image
-    float sigma_flow_radps = 0.08f; // rad/s
+    float sigma_flow_radps = 0.06f; // rad/s
 
     float sigma_range_m = 0.05f; // measurement noise of range sensor, in meters
 
