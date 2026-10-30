@@ -71,7 +71,7 @@ void setup()
     {
     }
   }
-  delay(500);
+  delay(200);
 
   // Initial read and initialize the attitude estimate.
   while (!imu_device.read(imu_data))
@@ -86,11 +86,16 @@ void setup()
 
   rpi.setup();
 
+  motor_device.write(0.0f, 0.0f, 0.0f, 0.0f);
+  bool setup_lock = true;
   do
   {
-    receiver.read(control_raw);
+    bool valid_frame = receiver.read(control_raw);
+    rpy_cmd = receiver.to_anglemode(control_raw);
+    pilot_vxyz_cmd = receiver.to_vxyz_mode(control_raw);
+    setup_lock = (control_raw.C3 > 1050.0f) || !valid_frame;
     delay(10);
-  } while (control_raw.C3 > 1050.0f);
+  } while (setup_lock);
 }
 
 void loop()
@@ -107,6 +112,8 @@ void loop()
   // eskf.correct_gravity(imu_data.accel);
 
   update_optical_flow(800);
+  Vec3 v_world = eskf.nominal.v;
+  EulerAngle e = quaternionToEuler(eskf.nominal.q);
 
   PPMCommand cmd_raw{};
   bool new_cmd = receiver.read(cmd_raw);
@@ -116,17 +123,12 @@ void loop()
     pilot_vxyz_cmd = receiver.to_vxyz_mode(cmd_raw);
     //debug::log(pilot_vxyz_cmd);
   }
-  else
-  {
-  }
 
   // Start from the latest pilot intent each loop, then let hold controllers
   // modify a working copy without feeding their own output back into engage logic.
   PPMCommand control_vxyz_cmd = pilot_vxyz_cmd;
 
-  Vec3 v_world = eskf.nominal.v;
-
-  EulerAngle e = quaternionToEuler(eskf.nominal.q);
+  
   float cy = cosf(e.yaw);
   float sy = sinf(e.yaw);
 
@@ -138,33 +140,16 @@ void loop()
       v_world.z};
 
   // state machine uses rpy cmd for thrust 0-1
-  statemachine.update(rpy_cmd, eskf.nominal, eskf.h_terrain);
+  statemachine.update(rpy_cmd, eskf.nominal, eskf.h_terrain, new_cmd);
 
   FlightState flightstate = statemachine.get_flightstate();
   FlightMode flightmode = statemachine.get_flightmode();
 
-  const bool motors_allowed =
-      flightstate != DISARMED;
-
-  const bool ground_state =
-      flightstate == DISARMED ||
-      flightstate == ARMED;
-
-  const bool manual_attitude = 
-      flightmode == ANGLE ||
-      flightstate == DISARMED ||
-      flightstate == ARMED ||
-      flightstate == TAKEOFF;
-
-  const bool manual_throttle = 
-      flightstate == DISARMED ||
-      flightstate == ARMED ||
-      flightstate == TAKEOFF ||
-      flightmode != VXYZ;
-
-  const bool use_vz_control =
-      motors_allowed &&
-      !manual_throttle;
+  const bool motors_allowed = statemachine.is_motors_allowed();
+  const bool ground_state = statemachine.is_ground_state();
+  const bool manual_attitude = statemachine.is_manual_attitude();
+  const bool manual_throttle = statemachine.is_manual_throttle();
+  const bool use_vz_control = statemachine.use_vz_control();
 
   if (flightstate == DISARMED)
   {
@@ -175,13 +160,16 @@ void loop()
 
   if (ground_state)
   {
+    // no position or alt hold when on ground
     pos_hold_controller.active = false;
     pos_hold_controller.target = eskf.nominal.p;
+    alt_hold_controller.active = false;
+    alt_hold_controller.target = eskf.nominal.p.z;
   }
   
   // position holding 
   
-  if (fabsf(pilot_vxyz_cmd.C2) <= 0.1f && fabsf(pilot_vxyz_cmd.C4) <= 0.1f)
+  if (fabsf(pilot_vxyz_cmd.C2) <= 0.1f && fabsf(pilot_vxyz_cmd.C4) <= 0.1f && !manual_attitude && flightstate == AIRBORNE)
   {
     if (!pos_hold_controller.active)
     {
@@ -210,7 +198,7 @@ void loop()
   }
 
   // alt holding
-  if (fabsf(pilot_vxyz_cmd.C3) <= 0.1f)
+  if (fabsf(pilot_vxyz_cmd.C3) <= 0.1f && flightstate == AIRBORNE && use_vz_control)
   {
     if (!alt_hold_controller.active)
     {
@@ -219,7 +207,6 @@ void loop()
     }
     float vz = alt_hold_controller.vz_from_z_error(eskf.nominal.p.z - alt_hold_controller.target);
     control_vxyz_cmd.C3 = vz;
-    // Serial.println("Alt hold active");
   }
   else
   {
@@ -245,7 +232,7 @@ void loop()
       angle_target,
       imu_data.gyro);
 
-  // Output to motor, lock until throttle is not 0
+  // throttle computation
 
   float throttle = 0.0f;
 
@@ -256,7 +243,7 @@ void loop()
   else
   {
     // ESKF v.z is positive down.
-    constexpr float HOVER_THRUST = 0.4f;
+    constexpr float HOVER_THRUST = 0.5f;
 
     float vz_cmd_down = control_vxyz_cmd.C3;
 
@@ -276,21 +263,23 @@ void loop()
     throttle = constrain(throttle, 0.0f, 1.0f);
   }
 
-  if (motors_allowed && throttle > 0.1f && throttle <= 1.0f)
+  // output to motors
+  if (motors_allowed && throttle > 0.1f)
   {
     // debug::log(throttle);
     motor_device.write(throttle, m_adjust.yaw, m_adjust.pitch, m_adjust.roll);
   }
   else
   {
-    // debug::log(throttle);
     motor.set_motor(MotorCommand{0.0f, 0.0f, 0.0f, 0.0f});
 
     motor_device.write(0.0f, 0.0f, 0.0f, 0.0f);
     reset_flight_controllers();
   }
-  // debug::plot(e * DEG_PER_RAD);
-  debug::plot(eskf.nominal.v);
+  
+  // logging and reporting
+  //debug::plot(eskf.nominal.v);
+
   ESKFStatePayload pl = pack(eskf.nominal, eskf.last_imu_timestamp, eskf.h_terrain);
   const uint8_t *pl_bytes = payload_bytes(pl);
   rpi.write(RPiMessageType::STATE, pl_bytes, sizeof(pl));

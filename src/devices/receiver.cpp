@@ -16,6 +16,9 @@ bool Receiver::read(RPICommand &cmd) {
 PPMCommand Receiver::to_anglemode(const PPMCommand& cmd) const {
     // Convert controller input to desired angle in degrees
     PPMCommand out;
+    // aux channel for flight mode selection
+    out.C6 = cmd.C6;
+
     out.C2 = (-cmd.C2 + 1500.0f) / 1000.0f * 70.0f;
     out.C4 = (cmd.C4 - 1500.0f) / 1000.0f * 70.0f;
     out.C1 = (cmd.C1 - 1500.0f) / 1000.0f * 70.0f;
@@ -42,6 +45,7 @@ PPMCommand Receiver::to_anglemode(const PPMCommand& cmd) const {
 PPMCommand Receiver::to_vxy_mode(const PPMCommand& cmd) const {
     // Convert controller input to desired angle/rate
     PPMCommand out;
+    out.C6 = cmd.C6;
     out.C2 = (cmd.C2 - 1500.0f) / 1000.0f * 1.8;
     out.C4 = (cmd.C4 - 1500.0f) / 1000.0f * 1.8;
     out.C1 = (cmd.C1 - 1500.0f) / 1000.0f * 70;  // map 1000 - 2000 to range -35 -> 35
@@ -68,20 +72,21 @@ PPMCommand Receiver::to_vxy_mode(const PPMCommand& cmd) const {
 PPMCommand Receiver::to_vxyz_mode(const PPMCommand& cmd) const {
     // Convert controller input to desired angle/rate
     PPMCommand out;
-    out.C2 = (cmd.C2 - 1500.0f) / 1000.0f * 3.5f;
-    out.C4 = (cmd.C4 - 1500.0f) / 1000.0f * 3.5f;
+    out.C6 = cmd.C6;
+    out.C2 = (cmd.C2 - 1500.0f) / 1000.0f * 6.0f;
+    out.C4 = (cmd.C4 - 1500.0f) / 1000.0f * 6.0f;
     out.C1 = (cmd.C1 - 1500.0f) / 1000.0f * 70;  // map 1000 - 2000 to range -35 -> 35
 
     out.C3 = -(cmd.C3 - 1500.0f) / 1000.0f *2; // map 1000 - 2000 to range -0.5m/s -> 0.5m/s. Negative sign due to up = negative z
 
-    // vz in -0.8m/s - 0.8m/s
+    // vz in -1m/s - 1m/s
     out.C3 = constrain(out.C3, -1.0f, 1.0f);
 
     // vx
-    out.C2 = constrain(out.C2, -1.7f, 1.7f);
+    out.C2 = constrain(out.C2, -6.0f, 6.0f);
 
     // vy
-    out.C4 = constrain(out.C4, -1.7f, 1.7f);
+    out.C4 = constrain(out.C4, -6.0f, 6.0f);
 
     // Yaw rate (degrees / s)
     out.C1 = constrain(out.C1, -35.0f, 35.0f);

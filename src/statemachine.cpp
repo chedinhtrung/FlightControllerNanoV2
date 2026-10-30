@@ -2,8 +2,23 @@
 
 void StateMachine::update(const PPMCommand &cmd,
                           const NominalState &state,
-                          float h_terrain)
+                          float h_terrain,
+                          bool new_valid_cmd)
 {
+    // Channel 6 remains in raw PPM microseconds after command conversion.
+    if (cmd.C6 < 1450.0f)
+    {
+        flightmode = VXYZ;
+    }
+    else if (cmd.C6 > 1550.0f)
+    {
+        flightmode = ANGLE;
+    }
+    else
+    {
+        flightmode = VXY;
+    }
+
     // Hard disarm / motor lock.
     // Your normal lowest stick is around 0.04, while the disarm switch forces 0.
     if (cmd.C3 < 0.005f)
@@ -12,13 +27,10 @@ void StateMachine::update(const PPMCommand &cmd,
         return;
     }
 
-    // TODO: Decode flight mode from switch later.
-    // For now keep whatever flightmode was already set, default VXYZ.
-
     constexpr float TAKEOFF_HEIGHT_AGL_M = 0.04f;
     constexpr float TAKEOFF_THROTTLE_INTENT = 0.15f;
 
-    constexpr float LAND_HEIGHT_AGL_M = 0.10f;
+    constexpr float LAND_HEIGHT_AGL_M = 0.1f;
     constexpr float LAND_STICK_LOW = 0.10f;
     constexpr float LAND_CANCEL_STICK = 0.10f;
 
@@ -46,9 +58,13 @@ void StateMachine::update(const PPMCommand &cmd,
     switch (flightstate)
     {
     case DISARMED:
-        // C3 is no longer zero, so motors are allowed.
-        // Stay manual throttle until takeoff is detected.
-        flightstate = ARMED;
+        // Require a fresh low-stick frame after throttle cut is released.
+        // C3 is normalized: 0.005..0.07 corresponds to 1005..1070 us.
+        // The hard-disarm check above excludes throttle-cut frames.
+        if (new_valid_cmd && cmd.C3 >= 0.005f && cmd.C3 <= 0.07f)
+        {
+            flightstate = ARMED;
+        }
         landed_counter = 0;
         break;
 
@@ -87,7 +103,7 @@ void StateMachine::update(const PPMCommand &cmd,
 
         // If low stick persists and vertical speed is stopped,
         // declare landed after 10 iterations.
-        if (cmd.C3 < LAND_STICK_LOW && vz_stopped)
+        if (cmd.C3 < LAND_STICK_LOW && vz_stopped && height_agl < LAND_HEIGHT_AGL_M)
         {
             if (landed_counter < LAND_STOPPED_COUNT_NEEDED)
             {
