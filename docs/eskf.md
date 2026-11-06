@@ -198,14 +198,15 @@ be the acceleration that we predict to measure in the body frame where $q$ is ou
 
 Pertube it with small angle $\delta \theta$ we get the true measurement (that the accel reads):
 
-$$h(q_t) = (R(q) \ \exp(\delta \theta))^T \ f_w = \exp(\delta \theta)^TR(q)^T(g) + a_b
+$$h(q_t) = (R(q) \ \exp(\delta \theta))^T \ f_w = \exp(\delta \theta)^T \ R(q)^T \ g + a_b
 $$
 
 Now assume that for small $\delta\theta$, we have $\exp(\delta \theta) \approx I + [\delta \theta]_\times$ we get
 
-$$H_\theta = \frac{\partial h(q_t)}{\partial \delta \theta} = \frac{\partial }{\partial \delta \theta} \  (I + [\delta \theta]_\times)^T \ R(q)^T \ g+ a_b\\ 
-= \frac{\partial }{\partial \delta \theta} \ -[\delta \theta]_\times \ R(q)^T  \ (g + a_b) = [R(q)^T \ (g + a_b)]_\times \ \delta \theta \\
-= [R(q)^T (g + a_b)]_\times = [h(q)]_\times
+$$H_\theta = \frac{\partial h(q_t)}{\partial \delta \theta} = 
+\frac{\partial }{\partial \delta \theta} \  (I + [\delta \theta]_\times)^T \ R(q)^T \ g+ a_b\\ 
+= \frac{\partial }{\partial \delta \theta} \ -[\delta \theta]_\times [\ R(q)^T  \ (g) + a_b] = [R(q)^T \ (g)+ a_b]_\times \ \delta \theta \\
+= [R(q)^T (g) + a_b]_\times = [h(q)]_\times
 $$
 
 Jacobian w.r.t to $\delta a_b$ is trivial.
@@ -268,7 +269,7 @@ $$
 {}_Bv_G = {}_BR_E \ v
 $$
 
-Then in the body / sensor frame, its velocity is
+Then the sensor's velocity expressed in body frame is
 
 $$
 {}_Bv_S = {}_B\omega_B \times {}_Br_{GS} + {}_BR_E \ v = - {}_Bv_{SO}
