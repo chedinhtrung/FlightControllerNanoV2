@@ -61,6 +61,7 @@ void setup()
     while (true)
     {
       Serial.println("IMU Failure");
+      digitalWrite(PB0, LOW);  
     }
   }
 

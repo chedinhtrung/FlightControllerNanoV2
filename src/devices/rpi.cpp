@@ -1,6 +1,6 @@
 #include "devices/rpi.h"
 
-HardwareSerial piSerial(PC7, PC6);
+HardwareSerial piSerial(PB8, PB9); // RX, TX
 
 RPi::RPi(HardwareSerial &serial) : serial_(serial) {}
 

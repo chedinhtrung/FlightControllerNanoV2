@@ -35,7 +35,7 @@ private:
     static constexpr uint8_t kRangeMsgId = 0x51;
     static constexpr uint8_t kMaxPayloadLen = 64;
 
-    HardwareSerial serial_ = HardwareSerial(UART5);    
+    HardwareSerial serial_ = HardwareSerial(PD6, PD5); // RX, TX    
     uint32_t baud_ = 115200;
     MTF02Data flow_data_{};
     bool has_new_sample_ = false;
